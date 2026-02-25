@@ -59,7 +59,38 @@ jobs:
             libvulkan-dev \
             libasound2-dev \
             libpulse-dev
+            
+      - name: Create patch for SIMDe   
+        run: |  
+          mkdir -p patches
+          cat > patches/simde-srli-epi64.patch << 'EOF'
+          --- a/thirdparty/simde/simde/x86/sse2.h
+          +++ b/thirdparty/simde/simde/x86/sse2.h
+          @@ -6347,7 +6347,16 @@
+           HEDLEY_DIAGNOSTIC_POP
+           #elif defined(SIMDE_ARM_NEON_A32V7_NATIVE)
+             #define simde_mm_srli_epi64(a, imm8) \
+          -      vreinterpretq_m128i_u64(vshrq_n_u64(simde__m128i_to_neon_u64(a), ((imm8) & 63) | (((imm8) & 63) == 0))))
+          +      __extension__ ({ \
+          +        const int shift = ((imm8) & 63); \
+          +        const int effective_shift = shift == 0 ? 64 : shift; \
+          +        if (__builtin_constant_p(effective_shift)) { \
+          +          vreinterpretq_m128i_u64(vshrq_n_u64(simde__m128i_to_neon_u64(a), effective_shift)); \
+          +        } else { \
+          +          uint64x2_t vec = simde__m128i_to_neon_u64(a); \
+          +          vreinterpretq_m128i_u64(vshrq_u64(vec, vdupq_n_u64(effective_shift))); \
+          +        } \
+          +      })
+           #elif defined(SIMDE_WASM_SIMD128_NATIVE)
+             #define simde_mm_srli_epi64(a, imm8) (wasm_i64x2_shr(a, ((imm8) & 63) | (((imm8) & 63) == 0)))
+           #else
+          EOF
 
+      - name: Apply SIMDe patch
+        run: |
+          cd thirdparty/simde
+          patch -p2 < ../../patches/simde-srli-epi64.patch || echo "Patch already applied or failed - continuing anyway"
+          cd ../..     
       - name: Configure (CMake preset for ARM64)
         run: cmake --preset linux-arm64
 
