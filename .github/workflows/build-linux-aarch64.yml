@@ -3,14 +3,14 @@ name: Build rexglue-sdk linux ARM64
 on:
   push:
     branches:
-      - aarch64  # test aarch64
+      - aarch64
   pull_request:
     branches:
-      - aarch64  # test pull resquest on this branch.
+      - aarch64
 
 jobs:
   build:
-    runs-on: ubuntu-24.04-arm  # Runner native ARM64
+    runs-on: ubuntu-24.04-arm
 
     env:
       CC: clang-20
@@ -21,20 +21,18 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 0
 
       - name: Install Clang 20 for ARM64
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget gnupg lsb-release software-properties-common
-          
-          # repo clang20 llvm
+          sudo apt-get install -y wget gnupg lsb-release software-properties-common patch
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
           sudo add-apt-repository "deb https://apt.llvm.org/noble/ llvm-toolchain-noble-20 main"
-          
           sudo apt-get update
           sudo apt-get install -y clang-20 lld-20
 
-      - name: Update alternatives to use Clang 20
+      - name: Update alternatives
         run: |
           sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-20 200
           sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-20 200
@@ -59,13 +57,23 @@ jobs:
             libvulkan-dev \
             libasound2-dev \
             libpulse-dev
-            
-      - name: Create patch for SIMDe   
-        run: |  
-          mkdir -p patches
-          cat > patches/simde-srli-epi64.patch << 'EOF'
-          --- a/thirdparty/simde/simde/x86/sse2.h
-          +++ b/thirdparty/simde/simde/x86/sse2.h
+
+      - name: Fix SIMDe patch for ARM64 NEON (simde/simde structure)
+        run: |
+          echo "=== Diagnosticando estructura de SIMDe ==="
+          find thirdparty/simde -name "sse2.h" -ls
+          
+          # La estructura es thirdparty/simde/simde/x86/sse2.h
+          cd thirdparty/simde/simde
+          
+          echo "Directorio actual: $(pwd)"
+          echo "Contenido de x86/:"
+          ls -la x86/ | head -10
+          
+          # Crear el parche con la ruta relativa correcta
+          cat > sse2.patch << 'EOF'
+          --- a/x86/sse2.h
+          +++ b/x86/sse2.h
           @@ -6347,7 +6347,16 @@
            HEDLEY_DIAGNOSTIC_POP
            #elif defined(SIMDE_ARM_NEON_A32V7_NATIVE)
@@ -85,24 +93,40 @@ jobs:
              #define simde_mm_srli_epi64(a, imm8) (wasm_i64x2_shr(a, ((imm8) & 63) | (((imm8) & 63) == 0)))
            #else
           EOF
+          
+          # Mostrar la sección a parchear
+          echo "=== Sección original ==="
+          grep -n "simde_mm_srli_epi64" x86/sse2.h -A 5 -B 5 || true
+          
+          # Aplicar el parche con nivel 1 (porque estamos dentro de simde/)
+          echo "Aplicando parche con patch -p1..."
+          patch -p1 < sse2.patch || {
+            echo "Patch falló, intentando con sed..."
+            cp x86/sse2.h x86/sse2.h.bak
+            sed -i '/#elif defined(SIMDE_ARM_NEON_A32V7_NATIVE)/,/^#elif/ {
+              s/vreinterpretq_m128i_u64(vshrq_n_u64(simde__m128i_to_neon_u64(a), ((imm8) \& 63) | (((imm8) \& 63) == 0))))/__extension__({ const int shift = ((imm8) \& 63); const int effective_shift = shift == 0 ? 64 : shift; if (__builtin_constant_p(effective_shift)) { vreinterpretq_m128i_u64(vshrq_n_u64(simde__m128i_to_neon_u64(a), effective_shift)); } else { uint64x2_t vec = simde__m128i_to_neon_u64(a); vreinterpretq_m128i_u64(vshrq_u64(vec, vdupq_n_u64(effective_shift))); } })/
+            }' x86/sse2.h
+          }
+          
+          # Verificar resultado
+          echo "=== Resultado después del parche ==="
+          grep -n "simde_mm_srli_epi64" x86/sse2.h -A 5 -B 5 || true
+          
+          cd ../../..
 
-      - name: Apply SIMDe patch
-        run: |
-          cd thirdparty/simde
-          patch -p2 < ../../patches/simde-srli-epi64.patch || echo "Patch already applied or failed - continuing anyway"
-          cd ../..     
       - name: Configure (CMake preset for ARM64)
         run: cmake --preset linux-arm64
 
-      - name: Make Install
+      - name: Build and Install
         run: cmake --build out/build/linux-arm64 --target install -j$(nproc)
 
       - name: Verify ARM64 binary
         run: |
-          file out/install/linux-arm64/bin/rexglue || true
+          echo "=== Binary information ==="
+          file out/install/linux-arm64/bin/rexglue-sdk || echo "Binary not found yet - may be named differently"
           echo "Expected: ELF 64-bit LSB executable, ARM aarch64"
 
-      - name: Upload build artifacts (for testing)
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: rexglue-sdk-linux-arm64
