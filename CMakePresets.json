@@ -105,10 +105,70 @@
             "inherits": "windows-base"
         },
         {
+            "name": "win-amd64-debug",
+            "displayName": "Windows AMD64 Debug only",
+            "description": "Single-config Debug build for Windows AMD64",
+            "inherits": "windows-base",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "win-amd64-release",
+            "displayName": "Windows AMD64 Release only",
+            "description": "Single-config Release build for Windows AMD64",
+            "inherits": "windows-base",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "win-amd64-relwithdebinfo",
+            "displayName": "Windows AMD64 RelWithDebInfo only",
+            "description": "Single-config RelWithDebInfo build for Windows AMD64",
+            "inherits": "windows-base",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
             "name": "win-arm64",
             "displayName": "Windows ARM64",
             "description": "Native build for Windows ARM64 using Clang",
             "inherits": "windows-arm64-base"
+        },
+        {
+            "name": "win-arm64-debug",
+            "displayName": "Windows ARM64 Debug only",
+            "description": "Single-config Debug build for Windows ARM64",
+            "inherits": "windows-arm64-base",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "win-arm64-release",
+            "displayName": "Windows ARM64 Release only",
+            "description": "Single-config Release build for Windows ARM64",
+            "inherits": "windows-arm64-base",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "win-arm64-relwithdebinfo",
+            "displayName": "Windows ARM64 RelWithDebInfo only",
+            "description": "Single-config RelWithDebInfo build for Windows ARM64",
+            "inherits": "windows-arm64-base",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
         },
         {
             "name": "linux-amd64",
@@ -117,10 +177,70 @@
             "inherits": "linux-base"
         },
         {
+            "name": "linux-amd64-debug",
+            "displayName": "Linux AMD64 Debug only",
+            "description": "Single-config Debug build for Linux AMD64",
+            "inherits": "linux-base",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "linux-amd64-release",
+            "displayName": "Linux AMD64 Release only",
+            "description": "Single-config Release build for Linux AMD64",
+            "inherits": "linux-base",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "linux-amd64-relwithdebinfo",
+            "displayName": "Linux AMD64 RelWithDebInfo only",
+            "description": "Single-config RelWithDebInfo build for Linux AMD64",
+            "inherits": "linux-base",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
             "name": "linux-arm64",
             "displayName": "Linux ARM64",
-            "description": "Native build for Linux ARM64 using Clang",
+            "description": "Multi-config build for Linux ARM64 using Clang",
             "inherits": "linux-arm64-base"
+        },
+        {
+            "name": "linux-arm64-debug",
+            "displayName": "Linux ARM64 Debug only",
+            "description": "Single-config Debug build for Linux ARM64",
+            "inherits": "linux-arm64-base",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "linux-arm64-release",
+            "displayName": "Linux ARM64 Release only",
+            "description": "Single-config Release build for Linux ARM64",
+            "inherits": "linux-arm64-base",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "linux-arm64-relwithdebinfo",
+            "displayName": "Linux ARM64 RelWithDebInfo only",
+            "description": "Single-config RelWithDebInfo build for Linux ARM64",
+            "inherits": "linux-arm64-base",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
         }
     ],
     "buildPresets": [
