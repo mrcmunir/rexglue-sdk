@@ -2,8 +2,11 @@ name: Build rexglue-sdk linux ARM64
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - aarch64  # test aarch64
+  pull_request:
+    branches:
+      - aarch64  # test pull resquest on this branch.
 
 jobs:
   build:
@@ -24,7 +27,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y wget gnupg lsb-release software-properties-common
           
-          # repo for LLVM clang20.
+          # repo clang20 llvm
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
           sudo add-apt-repository "deb https://apt.llvm.org/noble/ llvm-toolchain-noble-20 main"
           
@@ -37,8 +40,8 @@ jobs:
           sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-20 200
           clang --version
           clang++ --version
-          echo "Architecture: $(uname -m)"  
-          
+          echo "Architecture: $(uname -m)"
+
       - name: Install build dependencies
         run: |
           sudo apt update
@@ -63,13 +66,27 @@ jobs:
       - name: Make Install
         run: cmake --build out/build/linux-arm64 --target install -j$(nproc)
 
-      - name: Package install directory
+      - name: Verify ARM64 binary
+        run: |
+          file out/install/linux-arm64/bin/rexglue || true
+          echo "Expected: ELF 64-bit LSB executable, ARM aarch64"
+
+      - name: Upload build artifacts (for testing)
+        uses: actions/upload-artifact@v4
+        with:
+          name: rexglue-sdk-linux-arm64
+          path: out/install/linux-arm64
+          retention-days: 90
+
+      - name: Package install directory (for release)
+        if: startsWith(github.ref, 'refs/tags/v')  #
         run: |
           cd out/install
           tar -czf rexglue-sdk-linux-arm64.tar.gz linux-arm64
           zip -r rexglue-sdk-linux-arm64.zip linux-arm64
 
       - name: Upload release asset
+        if: startsWith(github.ref, 'refs/tags/v')  
         uses: softprops/action-gh-release@v2
         with:
           files: |
