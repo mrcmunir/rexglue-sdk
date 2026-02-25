@@ -391,14 +391,15 @@ add_library(libavutil STATIC
 # Add x86 optimizations on Windows/Linux
 # ONLY on x86_64, NOT on ARM64
 if(IS_X86_64)
-if(WIN32 OR (UNIX AND NOT APPLE))
-    target_sources(libavutil PRIVATE
-        ${FFMPEG_DIR}/libavutil/x86/cpu.c
-        ${FFMPEG_DIR}/libavutil/x86/fixed_dsp_init.c
-        ${FFMPEG_DIR}/libavutil/x86/float_dsp_init.c
-        ${FFMPEG_DIR}/libavutil/x86/imgutils_init.c
-        ${FFMPEG_DIR}/libavutil/x86/lls_init.c
-    )
+    if(WIN32 OR (UNIX AND NOT APPLE))
+        target_sources(libavutil PRIVATE
+            ${FFMPEG_DIR}/libavutil/x86/cpu.c
+            ${FFMPEG_DIR}/libavutil/x86/fixed_dsp_init.c
+            ${FFMPEG_DIR}/libavutil/x86/float_dsp_init.c
+            ${FFMPEG_DIR}/libavutil/x86/imgutils_init.c
+            ${FFMPEG_DIR}/libavutil/x86/lls_init.c
+        )
+    endif()
 endif()
 
 target_include_directories(libavutil
