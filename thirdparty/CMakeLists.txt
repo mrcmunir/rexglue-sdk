@@ -1,6 +1,22 @@
 # Third-party vendored dependencies for ReXGlue
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+
+#=============================================================================
+# Architecture detection
+#=============================================================================
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|ARM64)$")
+    set(IS_ARM64 TRUE)
+    set(IS_X86_64 FALSE)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
+    set(IS_ARM64 FALSE)
+    set(IS_X86_64 TRUE)
+else()
+    set(IS_ARM64 FALSE)
+    set(IS_X86_64 FALSE)
+endif()
+
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 #=============================================================================
 # Verify git submodules are initialized (only vendored ones)
 #=============================================================================
@@ -373,6 +389,8 @@ add_library(libavutil STATIC
 )
 
 # Add x86 optimizations on Windows/Linux
+# ONLY on x86_64, NOT on ARM64
+if(IS_X86_64)
 if(WIN32 OR (UNIX AND NOT APPLE))
     target_sources(libavutil PRIVATE
         ${FFMPEG_DIR}/libavutil/x86/cpu.c
@@ -462,7 +480,7 @@ if(WIN32)
 endif()
 
 # Add x86 optimizations on Windows/Linux
-if(WIN32 OR (UNIX AND NOT APPLE))
+if(IS_X86_64)
     target_sources(libavcodec PRIVATE
         ${FFMPEG_DIR}/libavcodec/x86/constants.c
         ${FFMPEG_DIR}/libavcodec/x86/fdctdsp_init.c
