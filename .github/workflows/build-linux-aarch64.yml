@@ -58,31 +58,31 @@ jobs:
             libasound2-dev \
             libpulse-dev
 
-      - name: Configure (CMake preset for ARM64)
-        run: cmake --preset linux-arm64
+      - name: Configure (CMake preset for ARM64 Release)
+        run: cmake --preset linux-arm64-release
 
       - name: Build and Install
-        run: cmake --build out/build/linux-arm64 --target install -j$(nproc)
+        run: cmake --build out/build/linux-arm64-release --target install -j$(nproc)
 
       - name: Verify ARM64 binary
         run: |
           echo "=== Binary information ==="
-          file out/install/linux-arm64/bin/rexglue || echo "Binary not found yet - may be named differently"
+          file out/install/linux-arm64-release/bin/rexglue || echo "Binary not found"
           echo "Expected: ELF 64-bit LSB executable, ARM aarch64"
 
       - name: Package artifacts
         run: |
           cd out/install
-          tar -czf rexglue-sdk-linux-arm64.tar.gz linux-arm64
-          zip -r rexglue-sdk-linux-arm64.zip linux-arm64
+          tar -czf rexglue-linux-arm64.tar.gz linux-arm64-release
+          zip -r rexglue-linux-arm64.zip linux-arm64-release
 
       - name: Upload build artifacts (always)
         uses: actions/upload-artifact@v4
         with:
-          name: rexglue-sdk-linux-arm64
+          name: rexglue-linux-arm64
           path: |
-            out/install/rexglue-sdk-linux-arm64.tar.gz
-            out/install/rexglue-sdk-linux-arm64.zip
+            out/install/rexglue-linux-arm64.tar.gz
+            out/install/rexglue-linux-arm64.zip
           retention-days: 90
 
       - name: Upload release asset (only on tags)
@@ -90,8 +90,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            out/install/rexglue-sdk-linux-arm64.tar.gz
-            out/install/rexglue-sdk-linux-arm64.zip
+            out/install/rexglue-linux-arm64.tar.gz
+            out/install/rexglue-linux-arm64.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
