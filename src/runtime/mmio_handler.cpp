@@ -22,6 +22,8 @@
 #include <rex/memory.h>
 #include <rex/platform.h>
 
+using namespace rex::arch;
+
 namespace rex::runtime {
 
 MMIOHandler* MMIOHandler::global_handler_ = nullptr;
