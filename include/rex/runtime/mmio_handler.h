@@ -17,11 +17,14 @@
 
 #include <rex/thread/mutex.h>
 #include <rex/platform.h>
+#include "rex/runtime/mmio_handler.h"
+#include <rex/exception_handler.h>
 
 namespace rex::arch {
 class Exception;
 class HostThreadContext;
-}  // namespace rex::arch
+}   // namespace rex::arch
+
 
 namespace rex::runtime {
 
