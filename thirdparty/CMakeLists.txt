@@ -418,7 +418,12 @@ if(IS_ARM64)
         ${FFMPEG_DIR}/libavutil/aarch64/float_dsp_init.c
         ${FFMPEG_DIR}/libavutil/aarch64/float_dsp_neon.S
     )
-    target_compile_definitions(libavutil PRIVATE HAVE_NEON=1)
+    # Forzar definiciones de NEON para ARM64
+    target_compile_definitions(libavutil PRIVATE 
+        HAVE_NEON=1 
+        HAVE_ARMV8=1 
+        HAVE_INLINE_ASM=1
+    )
 endif()
 
 target_include_directories(libavutil
@@ -515,8 +520,17 @@ if(IS_ARM64)
     target_sources(libavcodec PRIVATE
         ${FFMPEG_DIR}/libavcodec/aarch64/fft_init_aarch64.c
         ${FFMPEG_DIR}/libavcodec/aarch64/fft_neon.S
+        ${FFMPEG_DIR}/libavcodec/aarch64/mdct_neon.S
+        ${FFMPEG_DIR}/libavcodec/aarch64/simple_idct_neon.S
+        ${FFMPEG_DIR}/libavcodec/aarch64/videodsp.S
+        ${FFMPEG_DIR}/libavcodec/aarch64/neon.S
     )
-    target_compile_definitions(libavcodec PRIVATE HAVE_NEON=1)
+    # Forzar definiciones de NEON para ARM64
+    target_compile_definitions(libavcodec PRIVATE 
+        HAVE_NEON=1 
+        HAVE_ARMV8=1 
+        HAVE_INLINE_ASM=1
+    )
 endif()
 
 target_include_directories(libavcodec
