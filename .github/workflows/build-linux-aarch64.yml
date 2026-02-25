@@ -67,7 +67,7 @@ jobs:
       - name: Verify ARM64 binary
         run: |
           echo "=== Binary information ==="
-          file out/install/linux-arm64/bin/rexglue-sdk || echo "Binary not found yet - may be named differently"
+          file out/install/linux-arm64/bin/rexglue || echo "Binary not found yet - may be named differently"
           echo "Expected: ELF 64-bit LSB executable, ARM aarch64"
 
       - name: Package artifacts
