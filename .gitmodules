@@ -5,8 +5,9 @@
 	path = thirdparty/glslang
 	url = https://github.com/KhronosGroup/glslang.git
 [submodule "thirdparty/FFmpeg"]
-	path = thirdparty/FFmpeg
-	url = https://github.com/xenia-project/FFmpeg.git
+    path = thirdparty/FFmpeg
+    url = https://github.com/wmarti/FFmpeg.git
+    branch = arm64-all
 [submodule "thirdparty/tomlplusplus"]
 	path = thirdparty/tomlplusplus
 	url = https://github.com/marzer/tomlplusplus.git
