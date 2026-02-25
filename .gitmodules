@@ -8,6 +8,9 @@
     path = thirdparty/FFmpeg
     url = https://github.com/wmarti/FFmpeg.git
     branch = arm64-all
+	path = thirdparty/FFmpeg
+	url = https://github.com/wmarti/FFmpeg.git
+>>>>>>> Stashed changes
 [submodule "thirdparty/tomlplusplus"]
 	path = thirdparty/tomlplusplus
 	url = https://github.com/marzer/tomlplusplus.git
