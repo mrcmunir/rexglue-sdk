@@ -399,24 +399,48 @@ inline simde__m128i simde_mm_vctuxs(simde__m128 src1) {
     return result;
 }
 
-// Vector Shift Right
+// Vector Shift Right - shift entire 128-bit vector right by bits in low 3 bits of b
 inline simde__m128i simde_mm_vsr(simde__m128i a, simde__m128i b) {
-    b = simde_mm_srli_epi64(simde_mm_slli_epi64(b, 61), 61);
-    return simde_mm_castps_si128(simde_mm_insert_ps(
-        simde_mm_castsi128_ps(simde_mm_srl_epi64(a, b)),
-        simde_mm_castsi128_ps(simde_mm_srl_epi64(simde_mm_srli_si128(a, 4), b)), 0x10));
+    int shift = simde_mm_extract_epi8(b, 15) & 0x7;  // Get low 3 bits from byte 15 (BE: byte 0)
+    if (shift == 0) return a;
+    
+    // Versión portable usando enteros de 64 bits
+    alignas(16) uint64_t words[2];
+    simde_mm_store_si128(reinterpret_cast<simde__m128i*>(words), a);
+    
+    uint64_t low = words[0];
+    uint64_t high = words[1];
+    
+    // Shift right de 128 bits con acarreo
+    uint64_t new_high = high >> shift;
+    uint64_t new_low = (low >> shift) | (high << (64 - shift));
+    
+    words[0] = new_low;
+    words[1] = new_high;
+    
+    return simde_mm_load_si128(reinterpret_cast<const simde__m128i*>(words));
 }
 
 // Vector Shift Left - shift entire 128-bit vector left by bits in low 3 bits of b
 inline simde__m128i simde_mm_vsl(simde__m128i a, simde__m128i b) {
     int shift = simde_mm_extract_epi8(b, 15) & 0x7;  // Get low 3 bits from byte 15 (BE: byte 0)
     if (shift == 0) return a;
-    // Split into high and low 64-bit parts
-    simde__m128i low_shifted = simde_mm_slli_epi64(a, shift);
-    simde__m128i high_carry = simde_mm_srli_epi64(a, 64 - shift);
-    // Shift the carry from low qword to high qword position
-    high_carry = simde_mm_slli_si128(high_carry, 8);
-    return simde_mm_or_si128(low_shifted, high_carry);
+    
+    // Versión portable usando enteros de 64 bits
+    alignas(16) uint64_t words[2];
+    simde_mm_store_si128(reinterpret_cast<simde__m128i*>(words), a);
+    
+    uint64_t low = words[0];
+    uint64_t high = words[1];
+    
+    // Shift left de 128 bits con acarreo
+    uint64_t new_low = low << shift;
+    uint64_t new_high = (high << shift) | (low >> (64 - shift));
+    
+    words[0] = new_low;
+    words[1] = new_high;
+    
+    return simde_mm_load_si128(reinterpret_cast<const simde__m128i*>(words));
 }
 
 // Vector Shift Left by Octet - shift entire vector left by bytes in bits [121:124] of vB
