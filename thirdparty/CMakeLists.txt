@@ -308,6 +308,15 @@ else()
     set(FFMPEG_ATOMICS_INCLUDE "${FFMPEG_DIR}/compat/atomics/gcc")
 endif()
 
+#=============================================================================
+# ARM64 setup for FFmpeg (NEON optimizations)
+#=============================================================================
+if(IS_ARM64)
+    # Habilitar ensamblador para ARM64
+    enable_language(ASM)
+    set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -march=armv8-a")
+endif()
+
 # libavutil - FFmpeg utility library (must build first)
 add_library(libavutil STATIC
     ${FFMPEG_DIR}/libavutil/adler32.c
@@ -402,6 +411,16 @@ if(IS_X86_64)
     endif()
 endif()
 
+# ARM64 optimizations for libavutil
+if(IS_ARM64)
+    target_sources(libavutil PRIVATE
+        ${FFMPEG_DIR}/libavutil/aarch64/cpu.c
+        ${FFMPEG_DIR}/libavutil/aarch64/float_dsp_init.c
+        ${FFMPEG_DIR}/libavutil/aarch64/float_dsp_neon.S
+    )
+    target_compile_definitions(libavutil PRIVATE HAVE_NEON=1)
+endif()
+
 target_include_directories(libavutil
     PUBLIC
         $<BUILD_INTERFACE:${FFMPEG_DIR}>
@@ -489,6 +508,15 @@ if(IS_X86_64)
         ${FFMPEG_DIR}/libavcodec/x86/idctdsp_init.c
         ${FFMPEG_DIR}/libavcodec/x86/fdct.c
     )
+endif()
+
+# ARM64 optimizations for libavcodec
+if(IS_ARM64)
+    target_sources(libavcodec PRIVATE
+        ${FFMPEG_DIR}/libavcodec/aarch64/fft_init_aarch64.c
+        ${FFMPEG_DIR}/libavcodec/aarch64/fft_neon.S
+    )
+    target_compile_definitions(libavcodec PRIVATE HAVE_NEON=1)
 endif()
 
 target_include_directories(libavcodec
