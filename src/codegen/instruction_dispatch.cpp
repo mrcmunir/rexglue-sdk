@@ -308,6 +308,7 @@ static const std::unordered_map<int, Builder>& GetDispatchTable() {
       {PPC_INST_DB16CYC, build_db16cyc},
       {PPC_INST_CCTPL, build_cctpl},
       {PPC_INST_CCTPM, build_cctpm},
+      {PPC_INST_CCTPH, build_cctph},
       // Trap word immediate (all variants map to generic TWI)
       {PPC_INST_TWI, build_twi},
       {PPC_INST_TWLGTI, build_twi},
@@ -440,6 +441,7 @@ static const std::unordered_map<int, Builder>& GetDispatchTable() {
       {PPC_INST_VADDUHM, build_vadduhm},
       {PPC_INST_VADDUWM, build_vadduwm},
       {PPC_INST_VADDUWS, build_vadduws},
+      {PPC_INST_VADDUHS, build_vadduhs},
       {PPC_INST_VSUBSBS, build_vsubsbs},
       {PPC_INST_VSUBSWS, build_vsubsws},
       {PPC_INST_VSUBUBM, build_vsububm},
@@ -451,10 +453,14 @@ static const std::unordered_map<int, Builder>& GetDispatchTable() {
       {PPC_INST_VSUBSHS, build_vsubshs},
       {PPC_INST_VMAXSW, build_vmaxsw},
       {PPC_INST_VMAXSH, build_vmaxsh},
+      {PPC_INST_VMAXSB, build_vmaxsb},
       {PPC_INST_VMINSH, build_vminsh},
+      {PPC_INST_VMINSB, build_vminsb},
       {PPC_INST_VMINSW, build_vminsw},
       {PPC_INST_VMAXUH, build_vmaxuh},
       {PPC_INST_VMINUH, build_vminuh},
+      {PPC_INST_VMAXUB, build_vmaxub},
+      {PPC_INST_VMINUB, build_vminub},
 
       //=====================================================================
       // Vector - Average
@@ -497,6 +503,7 @@ static const std::unordered_map<int, Builder>& GetDispatchTable() {
       {PPC_INST_VCMPGTFP128, build_vcmpgtfp},
       {PPC_INST_VCMPGTUB, build_vcmpgtub},
       {PPC_INST_VCMPGTUH, build_vcmpgtuh},
+      {PPC_INST_VCMPGTUW, build_vcmpgtuw},
       {PPC_INST_VCMPGTSH, build_vcmpgtsh},
       {PPC_INST_VCMPGTSW, build_vcmpgtsw},
 
@@ -546,6 +553,7 @@ static const std::unordered_map<int, Builder>& GetDispatchTable() {
       {PPC_INST_VSLO128, build_vslo},
       {PPC_INST_VSR, build_vsr},
       {PPC_INST_VSRH, build_vsrh},
+      {PPC_INST_VSRB, build_vsrb},
       {PPC_INST_VSRAB, build_vsrab},
       {PPC_INST_VSRAH, build_vsrah},
       {PPC_INST_VSRAW, build_vsraw},
@@ -555,6 +563,8 @@ static const std::unordered_map<int, Builder>& GetDispatchTable() {
       {PPC_INST_VSRO, build_vsro},
       {PPC_INST_VSRO128, build_vsro},
       {PPC_INST_VRLH, build_vrlh},
+      {PPC_INST_VRLW, build_vrlw},
+      {PPC_INST_VRLW128, build_vrlw},
 
       //=====================================================================
       // Vector - Splat
