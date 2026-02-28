@@ -105,15 +105,19 @@ struct BoundsInfo {
 };
 
 BoundsInfo scanForBounds(DecodedBinary& decoded, uint32_t bctrAddr, const CodeRegion& region,
-                         uint8_t expectedReg) {
+                         uint8_t expectedReg, uint32_t funcStart) {
   BoundsInfo result;
   constexpr int kMaxBackwardScan = 64;
 
-  REXCODEGEN_TRACE("scanForBounds: bctr=0x{:08X} region=[0x{:08X}-0x{:08X}] expectedReg=r{}",
-                   bctrAddr, region.start, region.end, expectedReg);
+  // Use funcStart as lower bound to avoid scanning into other functions
+  uint32_t scanLowerBound = std::max(region.start, funcStart);
+
+  REXCODEGEN_TRACE(
+      "scanForBounds: bctr=0x{:08X} region=[0x{:08X}-0x{:08X}] funcStart=0x{:08X} expectedReg=r{}",
+      bctrAddr, region.start, region.end, funcStart, expectedReg);
 
   uint32_t scanAddr = bctrAddr;
-  for (int i = 0; i < kMaxBackwardScan && scanAddr >= region.start + 4; i++) {
+  for (int i = 0; i < kMaxBackwardScan && scanAddr >= scanLowerBound + 4; i++) {
     scanAddr -= 4;
     auto* insn = decoded.get(scanAddr);
     if (!insn)
@@ -328,16 +332,23 @@ std::optional<JumpTable> detectJumpTable(DecodedBinary& decoded, uint32_t bctrAd
       // Check common instruction forms that write to a register
       if (insn->opcode == Opcode::rlwinm) {
         destReg = insn->M.RA;
+      } else if (insn->opcode == Opcode::srawi || insn->opcode == Opcode::sraw ||
+                 insn->opcode == Opcode::srw || insn->opcode == Opcode::slw) {
+        // X-form shift instructions: destination is RA (bits 11-15)
+        destReg = insn->X.RA;
       } else if (insn->opcode == Opcode::lbz || insn->opcode == Opcode::lhz ||
                  insn->opcode == Opcode::lwz || insn->opcode == Opcode::li ||
-                 insn->opcode == Opcode::lis || insn->opcode == Opcode::addi ||
-                 insn->opcode == Opcode::mr) {
+                 insn->opcode == Opcode::lis || insn->opcode == Opcode::addi) {
         destReg = insn->D.RT;
       } else if (insn->opcode == Opcode::lbzx || insn->opcode == Opcode::lhzx ||
-                 insn->opcode == Opcode::lwzx || insn->opcode == Opcode::or_ ||
-                 insn->opcode == Opcode::and_ || insn->opcode == Opcode::xor_) {
-        // X-form instructions (loads, or, and, xor)
+                 insn->opcode == Opcode::lwzx) {
+        // X-form load instructions: destination is RT (bits 6-10)
         destReg = insn->X.RT;
+      } else if (insn->opcode == Opcode::or_ || insn->opcode == Opcode::and_ ||
+                 insn->opcode == Opcode::xor_ || insn->opcode == Opcode::mr) {
+        // X-form logical instructions: destination is RA (bits 11-15), NOT RT
+        // (RT is RS/source for these instructions)
+        destReg = insn->X.RA;
       } else if (insn->opcode == Opcode::add || insn->opcode == Opcode::subf) {
         // XO-form instructions (add, subf)
         destReg = insn->XO.RT;
@@ -483,7 +494,7 @@ std::optional<JumpTable> detectJumpTable(DecodedBinary& decoded, uint32_t bctrAd
   }
 
   // Find bounds
-  auto bounds = scanForBounds(decoded, bctrAddr, containingRegion, finalIndexReg);
+  auto bounds = scanForBounds(decoded, bctrAddr, containingRegion, finalIndexReg, funcStart);
   // If bounds not found (e.g., state machine pattern with forward bounds check),
   // use max entries and let the validation loop determine actual table size
   uint32_t entryCount = bounds.found ? bounds.maxEntries : kMaxTableEntries;

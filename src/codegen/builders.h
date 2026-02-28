@@ -376,6 +376,7 @@ bool build_eieio(BuilderContext& ctx);
 bool build_db16cyc(BuilderContext& ctx);
 bool build_cctpl(BuilderContext& ctx);
 bool build_cctpm(BuilderContext& ctx);
+bool build_cctph(BuilderContext& ctx);
 
 // Trap instructions (generic builders - all specific variants map to these)
 bool build_twi(BuilderContext& ctx);  // Trap word immediate
@@ -449,6 +450,7 @@ bool build_vaddubs(BuilderContext& ctx);
 bool build_vadduhm(BuilderContext& ctx);
 bool build_vadduwm(BuilderContext& ctx);
 bool build_vadduws(BuilderContext& ctx);
+bool build_vadduhs(BuilderContext& ctx);
 bool build_vsubsbs(BuilderContext& ctx);
 bool build_vsubshs(BuilderContext& ctx);
 bool build_vsubsws(BuilderContext& ctx);
@@ -459,11 +461,15 @@ bool build_vsubuhs(BuilderContext& ctx);
 bool build_vsubuhm(BuilderContext& ctx);
 bool build_vsubuwm(BuilderContext& ctx);
 bool build_vmaxsh(BuilderContext& ctx);
+bool build_vmaxsb(BuilderContext& ctx);
 bool build_vmaxsw(BuilderContext& ctx);
 bool build_vmaxuh(BuilderContext& ctx);
 bool build_vminsh(BuilderContext& ctx);
+bool build_vminsb(BuilderContext& ctx);
 bool build_vminsw(BuilderContext& ctx);
 bool build_vminuh(BuilderContext& ctx);
+bool build_vmaxub(BuilderContext& ctx);
+bool build_vminub(BuilderContext& ctx);
 
 // Vector average
 bool build_vavgsb(BuilderContext& ctx);
@@ -490,6 +496,7 @@ bool build_vcmpgefp(BuilderContext& ctx);
 bool build_vcmpgtfp(BuilderContext& ctx);
 bool build_vcmpgtub(BuilderContext& ctx);
 bool build_vcmpgtuh(BuilderContext& ctx);
+bool build_vcmpgtuw(BuilderContext& ctx);
 bool build_vcmpgtsh(BuilderContext& ctx);
 bool build_vcmpgtsw(BuilderContext& ctx);
 
@@ -521,12 +528,14 @@ bool build_vslw(BuilderContext& ctx);
 bool build_vslo(BuilderContext& ctx);
 bool build_vsr(BuilderContext& ctx);
 bool build_vsrh(BuilderContext& ctx);
+bool build_vsrb(BuilderContext& ctx);
 bool build_vsrab(BuilderContext& ctx);
 bool build_vsrah(BuilderContext& ctx);
 bool build_vsraw(BuilderContext& ctx);
 bool build_vsrw(BuilderContext& ctx);
 bool build_vsro(BuilderContext& ctx);
 bool build_vrlh(BuilderContext& ctx);
+bool build_vrlw(BuilderContext& ctx);
 
 // Vector splat
 bool build_vspltb(BuilderContext& ctx);
