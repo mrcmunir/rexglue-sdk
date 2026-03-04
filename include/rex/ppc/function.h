@@ -560,36 +560,47 @@ T GuestToHostFunction(const TFunction& func, TArgs&&... argv) {
     rex::HostToGuestFunction<function>(ctx, base); \
   }
 
-// Create a simple stub that does nothing (with call counter)
-#define PPC_STUB(subroutine)                                \
-  extern "C" PPC_FUNC(subroutine) {                         \
-    (void)base;                                             \
-    static std::atomic<uint32_t> s_counter{0};              \
-    uint32_t call_num = ++s_counter;                        \
-    if (call_num <= 3)                                      \
-      REXKRNL_WARN("{} [#{}] STUB", #subroutine, call_num); \
-    ctx.r3.u64 = 0;                                         \
+// Create a simple stub that does nothing
+#define PPC_STUB(subroutine)               \
+  extern "C" PPC_FUNC(subroutine) {        \
+    (void)base;                            \
+    REXKRNL_DEBUG("{} STUB", #subroutine); \
   }
 
-// Create a stub that logs when called (with call counter)
-#define PPC_STUB_LOG(subroutine, msg)                                  \
-  extern "C" PPC_FUNC(subroutine) {                                    \
-    (void)base;                                                        \
-    static std::atomic<uint32_t> s_counter{0};                         \
-    uint32_t call_num = ++s_counter;                                   \
-    if (call_num <= 3)                                                 \
-      REXKRNL_DEBUG("{} [#{}] STUB - {}", #subroutine, call_num, msg); \
-    ctx.r3.u64 = 0;                                                    \
+// Create a stub that logs a message when called
+#define PPC_STUB_LOG(subroutine, msg)                \
+  extern "C" PPC_FUNC(subroutine) {                  \
+    (void)base;                                      \
+    REXKRNL_DEBUG("{} STUB - {}", #subroutine, msg); \
   }
 
-// Create a stub that returns a specific value (with call counter)
-#define PPC_STUB_RETURN(subroutine, value)                                    \
-  extern "C" PPC_FUNC(subroutine) {                                           \
-    (void)base;                                                               \
-    static std::atomic<uint32_t> s_counter{0};                                \
-    uint32_t call_num = ++s_counter;                                          \
-    if (call_num <= 3)                                                        \
-      REXKRNL_DEBUG("{} [#{}] STUB - returning {:#x}", #subroutine, call_num, \
-                    static_cast<uint32_t>(value));                            \
-    ctx.r3.u64 = (value);                                                     \
+// Create a stub that returns a specific value
+#define PPC_STUB_RETURN(subroutine, value)                                                 \
+  extern "C" PPC_FUNC(subroutine) {                                                        \
+    (void)base;                                                                            \
+    REXKRNL_DEBUG("{} STUB - returning {:#x}", #subroutine, static_cast<uint32_t>(value)); \
+    ctx.r3.u64 = (value);                                                                  \
   }
+
+//=============================================================================
+// Kernel Export Constants & Convenience Macros
+//=============================================================================
+
+/// Maximum size of the loaded image name buffer (255 chars + NUL).
+constexpr size_t kExLoadedImageNameSize = 255 + 1;
+
+// Implemented function export: wraps PPC_HOOK for an xboxkrnl.exe export.
+// Usage: XBOXKRNL_EXPORT(__imp__FunctionName, handler_function)
+#define XBOXKRNL_EXPORT(name, function) PPC_HOOK(name, function)
+
+// Stub function export: wraps PPC_STUB for an xboxkrnl.exe export.
+// Usage: XBOXKRNL_EXPORT_STUB(__imp__FunctionName)
+#define XBOXKRNL_EXPORT_STUB(name) PPC_STUB(name)
+
+// Implemented function export: wraps PPC_HOOK for a xam.xex export.
+// Usage: XAM_EXPORT(__imp__FunctionName, handler_function)
+#define XAM_EXPORT(name, function) PPC_HOOK(name, function)
+
+// Stub function export: wraps PPC_STUB for a xam.xex export.
+// Usage: XAM_EXPORT_STUB(__imp__FunctionName)
+#define XAM_EXPORT_STUB(name) PPC_STUB(name)
