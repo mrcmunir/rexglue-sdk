@@ -3,9 +3,16 @@
 cmake_minimum_required(VERSION 3.25)
 
 project(ReXGlue
-    VERSION 0.2.3
+    VERSION 0.3.0
     LANGUAGES C CXX
     DESCRIPTION "Xbox 360 Recompilation SDK"
+)
+
+# Generate version header from CMake project version
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/rex/version.h.in
+    ${CMAKE_CURRENT_BINARY_DIR}/include/rex/version.h
+    @ONLY
 )
 
 #==========================================================
