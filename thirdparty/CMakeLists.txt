@@ -308,6 +308,23 @@ endif()
 
 set(FFMPEG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/FFmpeg")
 
+# Overlay generated FFmpeg list files to avoid editing the FFmpeg submodule.
+set(FFMPEG_OVERLAY_SRC_DIR "${PROJECT_SOURCE_DIR}/cmake/ffmpeg")
+set(FFMPEG_OVERLAY_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/ffmpeg-overlay")
+file(MAKE_DIRECTORY "${FFMPEG_OVERLAY_BUILD_DIR}/libavcodec")
+configure_file(
+  "${FFMPEG_OVERLAY_SRC_DIR}/codec_list.c" "${FFMPEG_OVERLAY_BUILD_DIR}/libavcodec/codec_list.c"
+  COPYONLY
+)
+configure_file(
+  "${FFMPEG_OVERLAY_SRC_DIR}/parser_list.c" "${FFMPEG_OVERLAY_BUILD_DIR}/libavcodec/parser_list.c"
+  COPYONLY
+)
+configure_file(
+  "${FFMPEG_OVERLAY_SRC_DIR}/bsf_list.c" "${FFMPEG_OVERLAY_BUILD_DIR}/libavcodec/bsf_list.c"
+  COPYONLY
+)
+
 # Common defines for both libraries
 set(FFMPEG_COMMON_DEFINES
     HAVE_AV_CONFIG_H
