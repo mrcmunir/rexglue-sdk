@@ -3,10 +3,12 @@ name: Build rexglue-sdk Windows ARM64
 on:
   push:
     tags:
-      - "v*"
+      - "v*"                      # stable releases on tags
+    branches:
+      - 'aarch64*'                # push on any branch starting with aarch64
   pull_request:
-     branches:
-      - 'aarch64*'    
+    branches:
+      - 'aarch64*'                # PR targeting any aarch64 branch
   workflow_dispatch:
 
 jobs:
