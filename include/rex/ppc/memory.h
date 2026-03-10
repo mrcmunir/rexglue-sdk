@@ -464,7 +464,14 @@ inline simde__m128i simde_mm_vsl(simde__m128i a, simde__m128i b) {
   if (shift == 0)
     return a;
 
-#if defined(__aarch64__) || defined(_M_ARM64)
+#if defined(__x86_64__) || defined(_M_X64)
+  // x86 implementation using SIMDe
+  simde__m128i low_shifted = simde_mm_slli_epi64(a, shift);
+  simde__m128i high_carry = simde_mm_srli_epi64(a, 64 - shift);
+  high_carry = simde_mm_slli_si128(high_carry, 8);
+  return simde_mm_or_si128(low_shifted, high_carry);
+
+#elif defined(__aarch64__) || defined(_M_ARM64)
   // ARM64 NEON implementation using vld1/vst1 for conversion
   uint64_t vals[2];
   uint64_t res[2] = {0, 0};
@@ -494,29 +501,8 @@ inline simde__m128i simde_mm_vsl(simde__m128i a, simde__m128i b) {
   vst1q_u64(res, result_vec);
   return simde_mm_load_si128((simde__m128i*)res);
 
-#elif defined(__x86_64__) || defined(_M_X64)
-  // x86 implementation using SIMDe
-  simde__m128i low_shifted = simde_mm_slli_epi64(a, shift);
-  simde__m128i high_carry = simde_mm_srli_epi64(a, 64 - shift);
-  high_carry = simde_mm_slli_si128(high_carry, 8);
-  return simde_mm_or_si128(low_shifted, high_carry);
-
 #else
-  // Portable fallback
-  alignas(16) uint64_t vals[2];
-  alignas(16) uint64_t res[2] = {0, 0};
-  simde_mm_store_si128((simde__m128i*)vals, a);
-  
-  if (shift < 64) {
-    uint64_t low = vals[0];
-    uint64_t high = vals[1];
-    uint64_t low_shifted = low << shift;
-    uint64_t high_shifted = (high << shift) | (low >> (64 - shift));
-    res[0] = low_shifted;
-    res[1] = high_shifted;
-  }
-  
-  return simde_mm_load_si128((simde__m128i*)res);
+#error "Unsupported architecture for simde_mm_vsl"
 #endif
 }
 
@@ -531,7 +517,15 @@ inline simde__m128i simde_mm_vslo(simde__m128i a, simde__m128i b) {
   if (shift_bytes >= 16)
     return simde_mm_setzero_si128();
 
-#if defined(__aarch64__) || defined(_M_ARM64)
+#if defined(__x86_64__) || defined(_M_X64)
+  // x86 implementation using SIMDe
+  alignas(16) uint8_t src[16], dst[16];
+  simde_mm_store_si128((simde__m128i*)src, a);
+  memset(dst, 0, sizeof(dst));
+  memcpy(dst + shift_bytes, src, 16 - shift_bytes);
+  return simde_mm_load_si128((simde__m128i*)dst);
+
+#elif defined(__aarch64__) || defined(_M_ARM64)
   // ARM64 NEON implementation using memory for conversion
   uint8_t src[16];
   uint8_t dst[16] = {0};
@@ -542,12 +536,7 @@ inline simde__m128i simde_mm_vslo(simde__m128i a, simde__m128i b) {
   return simde_mm_load_si128((simde__m128i*)dst);
 
 #else
-  // x86/portable implementation
-  alignas(16) uint8_t src[16], dst[16];
-  simde_mm_store_si128((simde__m128i*)src, a);
-  memset(dst, 0, sizeof(dst));
-  memcpy(dst + shift_bytes, src, 16 - shift_bytes);
-  return simde_mm_load_si128((simde__m128i*)dst);
+#error "Unsupported architecture for simde_mm_vslo"
 #endif
 }
 
@@ -562,7 +551,15 @@ inline simde__m128i simde_mm_vsro(simde__m128i a, simde__m128i b) {
   if (shift_bytes >= 16)
     return simde_mm_setzero_si128();
 
-#if defined(__aarch64__) || defined(_M_ARM64)
+#if defined(__x86_64__) || defined(_M_X64)
+  // x86 implementation using SIMDe
+  alignas(16) uint8_t src[16], dst[16];
+  simde_mm_store_si128((simde__m128i*)src, a);
+  memset(dst, 0, sizeof(dst));
+  memcpy(dst, src + shift_bytes, 16 - shift_bytes);
+  return simde_mm_load_si128((simde__m128i*)dst);
+
+#elif defined(__aarch64__) || defined(_M_ARM64)
   // ARM64 NEON implementation using memory for conversion
   uint8_t src[16];
   uint8_t dst[16] = {0};
@@ -573,12 +570,7 @@ inline simde__m128i simde_mm_vsro(simde__m128i a, simde__m128i b) {
   return simde_mm_load_si128((simde__m128i*)dst);
 
 #else
-  // x86/portable implementation
-  alignas(16) uint8_t src[16], dst[16];
-  simde_mm_store_si128((simde__m128i*)src, a);
-  memset(dst, 0, sizeof(dst));
-  memcpy(dst, src + shift_bytes, 16 - shift_bytes);
-  return simde_mm_load_si128((simde__m128i*)dst);
+#error "Unsupported architecture for simde_mm_vsro"
 #endif
 }
 
@@ -586,17 +578,17 @@ inline simde__m128i simde_mm_vsro(simde__m128i a, simde__m128i b) {
 // Platform-Specific Intrinsics
 //=============================================================================
 
-#if defined(__aarch64__) || defined(_M_ARM64)
+#if defined(__x86_64__) || defined(_M_X64)
+// On x86_64, __rdtsc is available via x86intrin.h or immintrin.h
+#if defined(__GNUC__) && !defined(__clang__)
+#include <x86intrin.h>
+#endif
+#elif defined(__aarch64__) || defined(_M_ARM64)
 inline uint64_t __rdtsc() {
   uint64_t ret;
   asm volatile("mrs %0, cntvct_el0\n\t" : "=r"(ret)::"memory");
   return ret;
 }
-#elif defined(__x86_64__) || defined(_M_X64)
-// On x86_64, __rdtsc is available via x86intrin.h or immintrin.h
-#if defined(__GNUC__) && !defined(__clang__)
-#include <x86intrin.h>
-#endif
 #else
 #error "Missing implementation for __rdtsc()"
 #endif
