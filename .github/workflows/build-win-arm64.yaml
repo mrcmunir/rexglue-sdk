@@ -5,6 +5,8 @@ on:
     tags:
       - "v*"
   pull_request:
+     branches:
+      - 'aarch64*'    
   workflow_dispatch:
 
 jobs:
