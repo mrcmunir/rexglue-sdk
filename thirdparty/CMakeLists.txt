@@ -8,7 +8,7 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|ARM64)$")
     set(IS_ARM64 TRUE)
     set(IS_X86_64 FALSE)
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|x86_64)$")
     set(IS_ARM64 FALSE)
     set(IS_X86_64 TRUE)
 else()
@@ -341,243 +341,234 @@ endif()
 #=============================================================================
 # ARM64 setup for FFmpeg (NEON optimizations)
 #=============================================================================
-if (IS_ARM64)
-  enable_language(ASM)
-  set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -march=armv8-a")
-endif ()
+if(IS_ARM64)
+    enable_language(ASM)
+    set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -march=armv8-a")
+endif()
 
 # libavutil - FFmpeg utility library (must build first)
-add_library(
-  libavutil STATIC
-  ${FFMPEG_DIR}/libavutil/adler32.c
-  ${FFMPEG_DIR}/libavutil/aes.c
-  ${FFMPEG_DIR}/libavutil/aes_ctr.c
-  ${FFMPEG_DIR}/libavutil/audio_fifo.c
-  ${FFMPEG_DIR}/libavutil/avstring.c
-  ${FFMPEG_DIR}/libavutil/avsscanf.c
-  ${FFMPEG_DIR}/libavutil/base64.c
-  ${FFMPEG_DIR}/libavutil/blowfish.c
-  ${FFMPEG_DIR}/libavutil/bprint.c
-  ${FFMPEG_DIR}/libavutil/buffer.c
-  ${FFMPEG_DIR}/libavutil/cast5.c
-  ${FFMPEG_DIR}/libavutil/camellia.c
-  ${FFMPEG_DIR}/libavutil/channel_layout.c
-  ${FFMPEG_DIR}/libavutil/color_utils.c
-  ${FFMPEG_DIR}/libavutil/cpu.c
-  ${FFMPEG_DIR}/libavutil/crc.c
-  ${FFMPEG_DIR}/libavutil/des.c
-  ${FFMPEG_DIR}/libavutil/dict.c
-  ${FFMPEG_DIR}/libavutil/display.c
-  ${FFMPEG_DIR}/libavutil/dovi_meta.c
-  ${FFMPEG_DIR}/libavutil/downmix_info.c
-  ${FFMPEG_DIR}/libavutil/encryption_info.c
-  ${FFMPEG_DIR}/libavutil/error.c
-  ${FFMPEG_DIR}/libavutil/eval.c
-  ${FFMPEG_DIR}/libavutil/fifo.c
-  ${FFMPEG_DIR}/libavutil/file.c
-  ${FFMPEG_DIR}/libavutil/file_open.c
-  ${FFMPEG_DIR}/libavutil/float_dsp.c
-  ${FFMPEG_DIR}/libavutil/fixed_dsp.c
-  ${FFMPEG_DIR}/libavutil/frame.c
-  ${FFMPEG_DIR}/libavutil/hash.c
-  ${FFMPEG_DIR}/libavutil/hdr_dynamic_metadata.c
-  ${FFMPEG_DIR}/libavutil/hmac.c
-  ${FFMPEG_DIR}/libavutil/hwcontext.c
-  ${FFMPEG_DIR}/libavutil/imgutils.c
-  ${FFMPEG_DIR}/libavutil/integer.c
-  ${FFMPEG_DIR}/libavutil/intmath.c
-  ${FFMPEG_DIR}/libavutil/lfg.c
-  ${FFMPEG_DIR}/libavutil/lls.c
-  ${FFMPEG_DIR}/libavutil/log.c
-  ${FFMPEG_DIR}/libavutil/log2_tab.c
-  ${FFMPEG_DIR}/libavutil/mathematics.c
-  ${FFMPEG_DIR}/libavutil/mastering_display_metadata.c
-  ${FFMPEG_DIR}/libavutil/md5.c
-  ${FFMPEG_DIR}/libavutil/mem.c
-  ${FFMPEG_DIR}/libavutil/murmur3.c
-  ${FFMPEG_DIR}/libavutil/opt.c
-  ${FFMPEG_DIR}/libavutil/parseutils.c
-  ${FFMPEG_DIR}/libavutil/pixdesc.c
-  ${FFMPEG_DIR}/libavutil/pixelutils.c
-  ${FFMPEG_DIR}/libavutil/random_seed.c
-  ${FFMPEG_DIR}/libavutil/rational.c
-  ${FFMPEG_DIR}/libavutil/reverse.c
-  ${FFMPEG_DIR}/libavutil/rc4.c
-  ${FFMPEG_DIR}/libavutil/ripemd.c
-  ${FFMPEG_DIR}/libavutil/samplefmt.c
-  ${FFMPEG_DIR}/libavutil/sha.c
-  ${FFMPEG_DIR}/libavutil/sha512.c
-  ${FFMPEG_DIR}/libavutil/slicethread.c
-  ${FFMPEG_DIR}/libavutil/spherical.c
-  ${FFMPEG_DIR}/libavutil/stereo3d.c
-  ${FFMPEG_DIR}/libavutil/threadmessage.c
-  ${FFMPEG_DIR}/libavutil/time.c
-  ${FFMPEG_DIR}/libavutil/timecode.c
-  ${FFMPEG_DIR}/libavutil/tree.c
-  ${FFMPEG_DIR}/libavutil/twofish.c
-  ${FFMPEG_DIR}/libavutil/utils.c
-  ${FFMPEG_DIR}/libavutil/xga_font_data.c
-  ${FFMPEG_DIR}/libavutil/xtea.c
-  ${FFMPEG_DIR}/libavutil/tea.c
-  ${FFMPEG_DIR}/libavutil/tx.c
-  ${FFMPEG_DIR}/libavutil/tx_float.c
-  ${FFMPEG_DIR}/libavutil/tx_double.c
-  ${FFMPEG_DIR}/libavutil/tx_int32.c
-  ${FFMPEG_DIR}/libavutil/video_enc_params.c
-  ${FFMPEG_DIR}/libavutil/film_grain_params.c
+add_library(libavutil STATIC
+    ${FFMPEG_DIR}/libavutil/adler32.c
+    ${FFMPEG_DIR}/libavutil/aes.c
+    ${FFMPEG_DIR}/libavutil/aes_ctr.c
+    ${FFMPEG_DIR}/libavutil/audio_fifo.c
+    ${FFMPEG_DIR}/libavutil/avstring.c
+    ${FFMPEG_DIR}/libavutil/avsscanf.c
+    ${FFMPEG_DIR}/libavutil/base64.c
+    ${FFMPEG_DIR}/libavutil/blowfish.c
+    ${FFMPEG_DIR}/libavutil/bprint.c
+    ${FFMPEG_DIR}/libavutil/buffer.c
+    ${FFMPEG_DIR}/libavutil/cast5.c
+    ${FFMPEG_DIR}/libavutil/camellia.c
+    ${FFMPEG_DIR}/libavutil/channel_layout.c
+    ${FFMPEG_DIR}/libavutil/color_utils.c
+    ${FFMPEG_DIR}/libavutil/cpu.c
+    ${FFMPEG_DIR}/libavutil/crc.c
+    ${FFMPEG_DIR}/libavutil/des.c
+    ${FFMPEG_DIR}/libavutil/dict.c
+    ${FFMPEG_DIR}/libavutil/display.c
+    ${FFMPEG_DIR}/libavutil/dovi_meta.c
+    ${FFMPEG_DIR}/libavutil/downmix_info.c
+    ${FFMPEG_DIR}/libavutil/encryption_info.c
+    ${FFMPEG_DIR}/libavutil/error.c
+    ${FFMPEG_DIR}/libavutil/eval.c
+    ${FFMPEG_DIR}/libavutil/fifo.c
+    ${FFMPEG_DIR}/libavutil/file.c
+    ${FFMPEG_DIR}/libavutil/file_open.c
+    ${FFMPEG_DIR}/libavutil/float_dsp.c
+    ${FFMPEG_DIR}/libavutil/fixed_dsp.c
+    ${FFMPEG_DIR}/libavutil/frame.c
+    ${FFMPEG_DIR}/libavutil/hash.c
+    ${FFMPEG_DIR}/libavutil/hdr_dynamic_metadata.c
+    ${FFMPEG_DIR}/libavutil/hmac.c
+    ${FFMPEG_DIR}/libavutil/hwcontext.c
+    ${FFMPEG_DIR}/libavutil/imgutils.c
+    ${FFMPEG_DIR}/libavutil/integer.c
+    ${FFMPEG_DIR}/libavutil/intmath.c
+    ${FFMPEG_DIR}/libavutil/lfg.c
+    ${FFMPEG_DIR}/libavutil/lls.c
+    ${FFMPEG_DIR}/libavutil/log.c
+    ${FFMPEG_DIR}/libavutil/log2_tab.c
+    ${FFMPEG_DIR}/libavutil/mathematics.c
+    ${FFMPEG_DIR}/libavutil/mastering_display_metadata.c
+    ${FFMPEG_DIR}/libavutil/md5.c
+    ${FFMPEG_DIR}/libavutil/mem.c
+    ${FFMPEG_DIR}/libavutil/murmur3.c
+    ${FFMPEG_DIR}/libavutil/opt.c
+    ${FFMPEG_DIR}/libavutil/parseutils.c
+    ${FFMPEG_DIR}/libavutil/pixdesc.c
+    ${FFMPEG_DIR}/libavutil/pixelutils.c
+    ${FFMPEG_DIR}/libavutil/random_seed.c
+    ${FFMPEG_DIR}/libavutil/rational.c
+    ${FFMPEG_DIR}/libavutil/reverse.c
+    ${FFMPEG_DIR}/libavutil/rc4.c
+    ${FFMPEG_DIR}/libavutil/ripemd.c
+    ${FFMPEG_DIR}/libavutil/samplefmt.c
+    ${FFMPEG_DIR}/libavutil/sha.c
+    ${FFMPEG_DIR}/libavutil/sha512.c
+    ${FFMPEG_DIR}/libavutil/slicethread.c
+    ${FFMPEG_DIR}/libavutil/spherical.c
+    ${FFMPEG_DIR}/libavutil/stereo3d.c
+    ${FFMPEG_DIR}/libavutil/threadmessage.c
+    ${FFMPEG_DIR}/libavutil/time.c
+    ${FFMPEG_DIR}/libavutil/timecode.c
+    ${FFMPEG_DIR}/libavutil/tree.c
+    ${FFMPEG_DIR}/libavutil/twofish.c
+    ${FFMPEG_DIR}/libavutil/utils.c
+    ${FFMPEG_DIR}/libavutil/xga_font_data.c
+    ${FFMPEG_DIR}/libavutil/xtea.c
+    ${FFMPEG_DIR}/libavutil/tea.c
+    ${FFMPEG_DIR}/libavutil/tx.c
+    ${FFMPEG_DIR}/libavutil/tx_float.c
+    ${FFMPEG_DIR}/libavutil/tx_double.c
+    ${FFMPEG_DIR}/libavutil/tx_int32.c
+    ${FFMPEG_DIR}/libavutil/video_enc_params.c
+    ${FFMPEG_DIR}/libavutil/film_grain_params.c
 )
 
-# Add x86 optimizations (ONLY on x86_64)
-if (IS_X86_64 AND (WIN32 OR (UNIX AND NOT APPLE)))
-  target_sources(
-    libavutil
-    PRIVATE ${FFMPEG_DIR}/libavutil/x86/cpu.c ${FFMPEG_DIR}/libavutil/x86/fixed_dsp_init.c
-            ${FFMPEG_DIR}/libavutil/x86/float_dsp_init.c
-            ${FFMPEG_DIR}/libavutil/x86/imgutils_init.c ${FFMPEG_DIR}/libavutil/x86/lls_init.c
-  )
-endif ()
+# Add x86 optimizations (only on x86_64)
+if(IS_X86_64)
+    target_sources(libavutil PRIVATE
+        ${FFMPEG_DIR}/libavutil/x86/cpu.c
+        ${FFMPEG_DIR}/libavutil/x86/fixed_dsp_init.c
+        ${FFMPEG_DIR}/libavutil/x86/float_dsp_init.c
+        ${FFMPEG_DIR}/libavutil/x86/imgutils_init.c
+        ${FFMPEG_DIR}/libavutil/x86/lls_init.c
+    )
+endif()
 
 # ARM64 optimizations for libavutil
-if (IS_ARM64)
-  target_sources(
-    libavutil
-    PRIVATE ${FFMPEG_DIR}/libavutil/aarch64/cpu.c ${FFMPEG_DIR}/libavutil/aarch64/float_dsp_init.c
-            ${FFMPEG_DIR}/libavutil/aarch64/float_dsp_neon.S
-  )
-  target_compile_definitions(libavutil PRIVATE HAVE_NEON=1 HAVE_ARMV8=1 HAVE_INLINE_ASM=1)
-endif ()
+if(IS_ARM64)
+    target_sources(libavutil PRIVATE
+        ${FFMPEG_DIR}/libavutil/aarch64/cpu.c
+        ${FFMPEG_DIR}/libavutil/aarch64/float_dsp_init.c
+        ${FFMPEG_DIR}/libavutil/aarch64/float_dsp_neon.S
+    )
+    target_compile_definitions(libavutil PRIVATE 
+        HAVE_NEON=1 
+        HAVE_ARMV8=1 
+        HAVE_INLINE_ASM=1
+    )
+endif()
 
-target_include_directories(
-  libavutil
-  PUBLIC $<BUILD_INTERFACE:${FFMPEG_DIR}> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-  PRIVATE ${FFMPEG_ATOMICS_INCLUDE}
+target_include_directories(libavutil
+    PUBLIC
+        $<BUILD_INTERFACE:${FFMPEG_DIR}>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    PRIVATE ${FFMPEG_ATOMICS_INCLUDE}
 )
 target_compile_definitions(libavutil PRIVATE ${FFMPEG_COMMON_DEFINES})
-target_compile_options(libavutil PRIVATE -w)
-if (WIN32)
-  target_link_libraries(libavutil PRIVATE bcrypt)
-endif ()
+target_compile_options(libavutil PRIVATE -w)  # Suppress warnings in third-party code
+if(WIN32)
+    target_link_libraries(libavutil PRIVATE bcrypt)
+endif()
 
 # libavcodec - FFmpeg codec library (depends on libavutil)
-add_library(
-  libavcodec STATIC
-  ${FFMPEG_DIR}/libavcodec/ac3_parser.c
-  ${FFMPEG_DIR}/libavcodec/adts_parser.c
-  ${FFMPEG_DIR}/libavcodec/allcodecs.c
-  ${FFMPEG_DIR}/libavcodec/avcodec.c
-  ${FFMPEG_DIR}/libavcodec/avdct.c
-  ${FFMPEG_DIR}/libavcodec/avpacket.c
-  ${FFMPEG_DIR}/libavcodec/avpicture.c
-  ${FFMPEG_DIR}/libavcodec/bitstream.c
-  ${FFMPEG_DIR}/libavcodec/bitstream_filter.c
-  ${FFMPEG_DIR}/libavcodec/bitstream_filters.c
-  ${FFMPEG_DIR}/libavcodec/bsf.c
-  ${FFMPEG_DIR}/libavcodec/codec_desc.c
-  ${FFMPEG_DIR}/libavcodec/codec_par.c
-  ${FFMPEG_DIR}/libavcodec/d3d11va.c
-  ${FFMPEG_DIR}/libavcodec/decode.c
-  ${FFMPEG_DIR}/libavcodec/dirac.c
-  ${FFMPEG_DIR}/libavcodec/dv_profile.c
-  ${FFMPEG_DIR}/libavcodec/encode.c
-  ${FFMPEG_DIR}/libavcodec/imgconvert.c
-  ${FFMPEG_DIR}/libavcodec/jni.c
-  ${FFMPEG_DIR}/libavcodec/mathtables.c
-  ${FFMPEG_DIR}/libavcodec/mediacodec.c
-  ${FFMPEG_DIR}/libavcodec/mpeg12framerate.c
-  ${FFMPEG_DIR}/libavcodec/options.c
-  ${FFMPEG_DIR}/libavcodec/parser.c
-  ${FFMPEG_DIR}/libavcodec/parsers.c
-  ${FFMPEG_DIR}/libavcodec/profiles.c
-  ${FFMPEG_DIR}/libavcodec/qsv_api.c
-  ${FFMPEG_DIR}/libavcodec/raw.c
-  ${FFMPEG_DIR}/libavcodec/utils.c
-  ${FFMPEG_DIR}/libavcodec/vorbis_parser.c
-  ${FFMPEG_DIR}/libavcodec/xiph.c
-  ${FFMPEG_DIR}/libavcodec/faandct.c
-  ${FFMPEG_DIR}/libavcodec/faanidct.c
-  ${FFMPEG_DIR}/libavcodec/fdctdsp.c
-  ${FFMPEG_DIR}/libavcodec/jfdctfst.c
-  ${FFMPEG_DIR}/libavcodec/jfdctint.c
-  ${FFMPEG_DIR}/libavcodec/idctdsp.c
-  ${FFMPEG_DIR}/libavcodec/simple_idct.c
-  ${FFMPEG_DIR}/libavcodec/jrevdct.c
-  ${FFMPEG_DIR}/libavcodec/dct.c
-  ${FFMPEG_DIR}/libavcodec/dct32_fixed.c
-  ${FFMPEG_DIR}/libavcodec/dct32_float.c
-  ${FFMPEG_DIR}/libavcodec/mdct_float.c
-  ${FFMPEG_DIR}/libavcodec/mdct_fixed_32.c
-  ${FFMPEG_DIR}/libavcodec/rdft.c
-  ${FFMPEG_DIR}/libavcodec/sinewin.c
-  ${FFMPEG_DIR}/libavcodec/mpegaudio.c
-  ${FFMPEG_DIR}/libavcodec/mpegaudiodec_common.c
-  ${FFMPEG_DIR}/libavcodec/mpegaudiodsp.c
-  ${FFMPEG_DIR}/libavcodec/mpegaudiodsp_data.c
-  ${FFMPEG_DIR}/libavcodec/mpegaudiodsp_fixed.c
-  ${FFMPEG_DIR}/libavcodec/mpegaudiodsp_float.c
-  ${FFMPEG_DIR}/libavcodec/mpegaudiodecheader.c
-  ${FFMPEG_DIR}/libavcodec/mpegaudiodata.c
-  ${FFMPEG_DIR}/libavcodec/wma_freqs.c
-  ${FFMPEG_DIR}/libavcodec/wmaprodec.c
-  ${FFMPEG_DIR}/libavcodec/wma.c
-  ${FFMPEG_DIR}/libavcodec/wma_common.c
-  ${FFMPEG_DIR}/libavcodec/null_bsf.c
-  ${FFMPEG_DIR}/libavcodec/mpegaudio_parser.c
-  ${FFMPEG_DIR}/libavcodec/pthread.c
-  ${FFMPEG_DIR}/libavcodec/pthread_slice.c
-  ${FFMPEG_DIR}/libavcodec/pthread_frame.c
-  ${FFMPEG_DIR}/libavcodec/avfft.c
-  ${FFMPEG_DIR}/libavcodec/fft_float.c
-  ${FFMPEG_DIR}/libavcodec/fft_fixed_32.c
-  ${FFMPEG_DIR}/libavcodec/fft_init_table.c
-  ${FFMPEG_DIR}/libavcodec/mpegaudiodec_fixed.c
-  ${FFMPEG_DIR}/libavcodec/mpegaudiodec_float.c
-  ${FFMPEG_DIR}/libavcodec/wmadec.c
-  ${FFMPEG_DIR}/libavcodec/aactab.c
+add_library(libavcodec STATIC
+    ${FFMPEG_DIR}/libavcodec/ac3_parser.c
+    ${FFMPEG_DIR}/libavcodec/adts_parser.c
+    ${FFMPEG_DIR}/libavcodec/allcodecs.c
+    ${FFMPEG_DIR}/libavcodec/avcodec.c
+    ${FFMPEG_DIR}/libavcodec/avdct.c
+    ${FFMPEG_DIR}/libavcodec/avpacket.c
+    ${FFMPEG_DIR}/libavcodec/avpicture.c
+    ${FFMPEG_DIR}/libavcodec/bitstream.c
+    ${FFMPEG_DIR}/libavcodec/bitstream_filter.c
+    ${FFMPEG_DIR}/libavcodec/bitstream_filters.c
+    ${FFMPEG_DIR}/libavcodec/bsf.c
+    ${FFMPEG_DIR}/libavcodec/codec_desc.c
+    ${FFMPEG_DIR}/libavcodec/codec_par.c
+    ${FFMPEG_DIR}/libavcodec/d3d11va.c
+    ${FFMPEG_DIR}/libavcodec/decode.c
+    ${FFMPEG_DIR}/libavcodec/dirac.c
+    ${FFMPEG_DIR}/libavcodec/dv_profile.c
+    ${FFMPEG_DIR}/libavcodec/encode.c
+    ${FFMPEG_DIR}/libavcodec/imgconvert.c
+    ${FFMPEG_DIR}/libavcodec/jni.c
+    ${FFMPEG_DIR}/libavcodec/mathtables.c
+    ${FFMPEG_DIR}/libavcodec/mediacodec.c
+    ${FFMPEG_DIR}/libavcodec/mpeg12framerate.c
+    ${FFMPEG_DIR}/libavcodec/options.c
+    ${FFMPEG_DIR}/libavcodec/parser.c
+    ${FFMPEG_DIR}/libavcodec/parsers.c
+    ${FFMPEG_DIR}/libavcodec/profiles.c
+    ${FFMPEG_DIR}/libavcodec/qsv_api.c
+    ${FFMPEG_DIR}/libavcodec/raw.c
+    ${FFMPEG_DIR}/libavcodec/utils.c
+    ${FFMPEG_DIR}/libavcodec/vorbis_parser.c
+    ${FFMPEG_DIR}/libavcodec/xiph.c
+    ${FFMPEG_DIR}/libavcodec/faandct.c
+    ${FFMPEG_DIR}/libavcodec/faanidct.c
+    ${FFMPEG_DIR}/libavcodec/fdctdsp.c
+    ${FFMPEG_DIR}/libavcodec/jfdctfst.c
+    ${FFMPEG_DIR}/libavcodec/jfdctint.c
+    ${FFMPEG_DIR}/libavcodec/idctdsp.c
+    ${FFMPEG_DIR}/libavcodec/simple_idct.c
+    ${FFMPEG_DIR}/libavcodec/jrevdct.c
+    ${FFMPEG_DIR}/libavcodec/mdct_float.c
+    ${FFMPEG_DIR}/libavcodec/mdct_fixed_32.c
+    ${FFMPEG_DIR}/libavcodec/sinewin.c
+    ${FFMPEG_DIR}/libavcodec/wma_freqs.c
+    ${FFMPEG_DIR}/libavcodec/wmaprodec.c
+    ${FFMPEG_DIR}/libavcodec/wma.c
+    ${FFMPEG_DIR}/libavcodec/wma_common.c
+    ${FFMPEG_DIR}/libavcodec/null_bsf.c
+    ${FFMPEG_DIR}/libavcodec/pthread.c
+    ${FFMPEG_DIR}/libavcodec/pthread_slice.c
+    ${FFMPEG_DIR}/libavcodec/pthread_frame.c
+    ${FFMPEG_DIR}/libavcodec/avfft.c
+    ${FFMPEG_DIR}/libavcodec/fft_float.c
+    ${FFMPEG_DIR}/libavcodec/fft_fixed_32.c
+    ${FFMPEG_DIR}/libavcodec/fft_init_table.c
 )
 
 # Windows-specific source
-if (WIN32)
-  target_sources(libavcodec PRIVATE ${FFMPEG_DIR}/libavcodec/file_open.c)
-endif ()
+if(WIN32)
+    target_sources(libavcodec PRIVATE
+        ${FFMPEG_DIR}/libavcodec/file_open.c
+    )
+endif()
 
-# Add x86 optimizations (ONLY on x86_64)
-if (IS_X86_64)
-  target_sources(
-    libavcodec
-    PRIVATE ${FFMPEG_DIR}/libavcodec/x86/constants.c ${FFMPEG_DIR}/libavcodec/x86/fdctdsp_init.c
-            ${FFMPEG_DIR}/libavcodec/x86/fft_init.c ${FFMPEG_DIR}/libavcodec/x86/idctdsp_init.c
-            ${FFMPEG_DIR}/libavcodec/x86/dct_init.c ${FFMPEG_DIR}/libavcodec/x86/mpegaudiodsp.c
-            ${FFMPEG_DIR}/libavcodec/x86/fdct.c
-  )
-endif ()
+# Add x86 optimizations (only on x86_64)
+if(IS_X86_64)
+    target_sources(libavcodec PRIVATE
+        ${FFMPEG_DIR}/libavcodec/x86/constants.c
+        ${FFMPEG_DIR}/libavcodec/x86/fdctdsp_init.c
+        ${FFMPEG_DIR}/libavcodec/x86/fft_init.c
+        ${FFMPEG_DIR}/libavcodec/x86/idctdsp_init.c
+        ${FFMPEG_DIR}/libavcodec/x86/fdct.c
+    )
+endif()
 
 # ARM64 optimizations for libavcodec
-if (IS_ARM64)
-  target_sources(
-    libavcodec
-    PRIVATE ${FFMPEG_DIR}/libavcodec/aarch64/fft_init_aarch64.c
-            ${FFMPEG_DIR}/libavcodec/aarch64/fft_neon.S
-            ${FFMPEG_DIR}/libavcodec/aarch64/mdct_neon.S
-            ${FFMPEG_DIR}/libavcodec/aarch64/simple_idct_neon.S
-            ${FFMPEG_DIR}/libavcodec/aarch64/videodsp.S
-            ${FFMPEG_DIR}/libavcodec/aarch64/neon.S
-  )
-  target_compile_definitions(libavcodec PRIVATE HAVE_NEON=1 HAVE_ARMV8=1 HAVE_INLINE_ASM=1)
-endif ()
+if(IS_ARM64)
+    target_sources(libavcodec PRIVATE
+        ${FFMPEG_DIR}/libavcodec/aarch64/fft_init_aarch64.c
+        ${FFMPEG_DIR}/libavcodec/aarch64/fft_neon.S
+        ${FFMPEG_DIR}/libavcodec/aarch64/mdct_neon.S
+        ${FFMPEG_DIR}/libavcodec/aarch64/simple_idct_neon.S
+        ${FFMPEG_DIR}/libavcodec/aarch64/videodsp.S
+        ${FFMPEG_DIR}/libavcodec/aarch64/neon.S
+    )
+    target_compile_definitions(libavcodec PRIVATE 
+        HAVE_NEON=1 
+        HAVE_ARMV8=1 
+        HAVE_INLINE_ASM=1
+    )
+endif()
 
-target_include_directories(libavcodec BEFORE PRIVATE "${FFMPEG_OVERLAY_BUILD_DIR}")
-
-target_include_directories(
-  libavcodec
-  PUBLIC $<BUILD_INTERFACE:${FFMPEG_DIR}> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-  PRIVATE ${FFMPEG_ATOMICS_INCLUDE}
+target_include_directories(libavcodec
+    PUBLIC
+        $<BUILD_INTERFACE:${FFMPEG_DIR}>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    PRIVATE ${FFMPEG_ATOMICS_INCLUDE}
 )
 target_compile_definitions(libavcodec PRIVATE ${FFMPEG_COMMON_DEFINES})
-target_compile_options(libavcodec PRIVATE -w)
+target_compile_options(libavcodec PRIVATE -w)  # Suppress warnings in third-party code
 target_link_libraries(libavcodec PUBLIC libavutil)
-if (WIN32)
-  target_link_libraries(libavcodec PRIVATE bcrypt)
-endif ()
+if(WIN32)
+    target_link_libraries(libavcodec PRIVATE bcrypt)
+endif()
 
 # IDE folder organization
 set_target_properties(libavutil libavcodec PROPERTIES FOLDER "FFmpeg")
