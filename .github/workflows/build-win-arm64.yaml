@@ -1,0 +1,53 @@
+name: Build rexglue-sdk Windows ARM64
+
+on:
+  push:
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-11-arm
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure (CMake preset)
+        run: cmake --preset win-arm64
+
+      - name: Build and Install
+        run: cmake --build out/build/win-arm64 --target install -j $env:NUMBER_OF_PROCESSORS
+
+      - name: Package
+        run: |
+          cd out/install
+          7z a rexglue-sdk-win-arm64.zip win-arm64
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rexglue-sdk-win-arm64
+          path: out/install/rexglue-sdk-win-arm64.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: rexglue-sdk-win-arm64
+          path: .
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: rexglue-sdk-win-arm64.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
