@@ -53,12 +53,12 @@ LONG CALLBACK ExceptionHandlerCallback(PEXCEPTION_POINTERS ex_info) {
 #elif defined(_M_ARM64)
   // ARM64 context capture
   thread_context.pc = ex_info->ContextRecord->Pc;
-  thread_context.pstate = ex_info->ContextRecord->Pstate;   // or Cpsr
-  // General‑purpose registers X0..X28 (or X0..X30) are contiguous.
+  thread_context.pstate = ex_info->ContextRecord->Cpsr;   // Use Cpsr, not Pstate
+  // General‑purpose registers X0..X28, Fp, Lr, Sp are contiguous.
   std::memcpy(thread_context.int_registers, &ex_info->ContextRecord->X0,
               sizeof(thread_context.int_registers));
-  // NEON registers V0..V31 are 128‑bit.
-  std::memcpy(thread_context.xmm_registers, &ex_info->ContextRecord->V0,
+  // NEON registers V[0]..V[31] are 128‑bit.
+  std::memcpy(thread_context.xmm_registers, &ex_info->ContextRecord->V[0],
               sizeof(thread_context.xmm_registers));
 #else
 #error Unsupported architecture
@@ -110,7 +110,7 @@ LONG CALLBACK ExceptionHandlerCallback(PEXCEPTION_POINTERS ex_info) {
             thread_context.int_registers[modified_register_index];
       }
 
-      // Note: method is modified_x_registers(), not modified_xmm_registers.
+      // Use modified_x_registers() as suggested by the compiler.
       uint16_t modified_xmm_registers_remaining = ex.modified_x_registers();
       while (rex::bit_scan_forward(modified_xmm_registers_remaining, &modified_register_index)) {
         modified_xmm_registers_remaining &= ~(UINT16_C(1) << modified_register_index);
@@ -120,10 +120,9 @@ LONG CALLBACK ExceptionHandlerCallback(PEXCEPTION_POINTERS ex_info) {
 #elif defined(_M_ARM64)
       // Restore ARM64 context
       ex_info->ContextRecord->Pc = thread_context.pc;
-      ex_info->ContextRecord->Pstate = thread_context.pstate;   // or Cpsr
+      ex_info->ContextRecord->Cpsr = thread_context.pstate;
 
       uint32_t modified_register_index;
-      // For ARM64 the mask is likely 32‑bit (up to 31 registers).
       uint32_t modified_int_registers_remaining = ex.modified_int_registers();
       while (rex::bit_scan_forward(modified_int_registers_remaining, &modified_register_index)) {
         modified_int_registers_remaining &= ~(UINT32_C(1) << modified_register_index);
@@ -134,7 +133,7 @@ LONG CALLBACK ExceptionHandlerCallback(PEXCEPTION_POINTERS ex_info) {
       uint32_t modified_xmm_registers_remaining = ex.modified_x_registers();
       while (rex::bit_scan_forward(modified_xmm_registers_remaining, &modified_register_index)) {
         modified_xmm_registers_remaining &= ~(UINT32_C(1) << modified_register_index);
-        std::memcpy(&ex_info->ContextRecord->V0 + modified_register_index,
+        std::memcpy(&ex_info->ContextRecord->V[modified_register_index],
                     &thread_context.xmm_registers[modified_register_index], sizeof(vec128_t));
       }
 #endif
