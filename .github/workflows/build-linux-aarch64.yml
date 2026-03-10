@@ -66,7 +66,7 @@ jobs:
             libasound2-dev \
             libpulse-dev
 
-      - name: Configure (CMake multi-config preset)
+      - name: Configure (CMake multi‑config preset)
         run: cmake --preset linux-arm64
 
       - name: Build ${{ matrix.config }}
@@ -112,38 +112,3 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  nightly:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
-
-      - name: Create/Update nightly release
-        uses: andelf/nightly-release@main
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: nightly
-          name: 'Nightly Build $$'
-          prerelease: true
-          body: |
-            ## Nightly Build
-            
-            This is an automatic build from the latest commit on the `aarch64 Nightly` branch.
-            
-            **Warning**: This is a development version, not recommended for production use.
-            
-            Includes:
-            - Debug build (`rexglue-sdk-linux-arm64-debug.zip`)
-            - Release build (`rexglue-sdk-linux-arm64-release.zip`)
-            - RelWithDebInfo build (`rexglue-sdk-linux-arm64-relwithdebinfo.zip`)
-            
-            Last updated: ${{ github.event.repository.updated_at }}
-          files: |
-            artifacts/*.zip
