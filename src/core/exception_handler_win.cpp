@@ -51,15 +51,17 @@ LONG CALLBACK ExceptionHandlerCallback(PEXCEPTION_POINTERS ex_info) {
   std::memcpy(thread_context.xmm_registers, &ex_info->ContextRecord->Xmm0,
               sizeof(thread_context.xmm_registers));
 #elif defined(_M_ARM64)
-  // ARM64 context capture
+  // ARM64 context capture – adjust member names to match your HostThreadContext
   thread_context.pc = ex_info->ContextRecord->Pc;
-  thread_context.pstate = ex_info->ContextRecord->Cpsr;   // Use Cpsr, not Pstate
-  // General‑purpose registers X0..X28, Fp, Lr, Sp are contiguous.
-  std::memcpy(thread_context.int_registers, &ex_info->ContextRecord->X0,
-              sizeof(thread_context.int_registers));
-  // NEON registers V[0]..V[31] are 128‑bit.
-  std::memcpy(thread_context.xmm_registers, &ex_info->ContextRecord->V[0],
-              sizeof(thread_context.xmm_registers));
+  thread_context.pstate = ex_info->ContextRecord->Cpsr;          // or Cpsr
+
+  // Copy integer registers X0..X30 – assumes thread_context.x[] array exists
+  std::memcpy(thread_context.x, &ex_info->ContextRecord->X0,
+              sizeof(thread_context.x));
+
+  // Copy SIMD registers V[0]..V[31] – assumes thread_context.v[] array exists
+  std::memcpy(thread_context.v, &ex_info->ContextRecord->V[0],
+              sizeof(thread_context.v));
 #else
 #error Unsupported architecture
 #endif
@@ -110,7 +112,6 @@ LONG CALLBACK ExceptionHandlerCallback(PEXCEPTION_POINTERS ex_info) {
             thread_context.int_registers[modified_register_index];
       }
 
-      // Use modified_x_registers() as suggested by the compiler.
       uint16_t modified_xmm_registers_remaining = ex.modified_x_registers();
       while (rex::bit_scan_forward(modified_xmm_registers_remaining, &modified_register_index)) {
         modified_xmm_registers_remaining &= ~(UINT16_C(1) << modified_register_index);
@@ -118,7 +119,7 @@ LONG CALLBACK ExceptionHandlerCallback(PEXCEPTION_POINTERS ex_info) {
                     &thread_context.xmm_registers[modified_register_index], sizeof(vec128_t));
       }
 #elif defined(_M_ARM64)
-      // Restore ARM64 context
+      // Restore ARM64 context – use the actual member names from your HostThreadContext
       ex_info->ContextRecord->Pc = thread_context.pc;
       ex_info->ContextRecord->Cpsr = thread_context.pstate;
 
@@ -127,14 +128,14 @@ LONG CALLBACK ExceptionHandlerCallback(PEXCEPTION_POINTERS ex_info) {
       while (rex::bit_scan_forward(modified_int_registers_remaining, &modified_register_index)) {
         modified_int_registers_remaining &= ~(UINT32_C(1) << modified_register_index);
         (&ex_info->ContextRecord->X0)[modified_register_index] =
-            thread_context.int_registers[modified_register_index];
+            thread_context.x[modified_register_index];
       }
 
       uint32_t modified_xmm_registers_remaining = ex.modified_x_registers();
       while (rex::bit_scan_forward(modified_xmm_registers_remaining, &modified_register_index)) {
         modified_xmm_registers_remaining &= ~(UINT32_C(1) << modified_register_index);
         std::memcpy(&ex_info->ContextRecord->V[modified_register_index],
-                    &thread_context.xmm_registers[modified_register_index], sizeof(vec128_t));
+                    &thread_context.v[modified_register_index], sizeof(vec128_t));
       }
 #endif
 
