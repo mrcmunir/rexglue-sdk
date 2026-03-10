@@ -52,6 +52,11 @@ if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "18.0")
     message(FATAL_ERROR "ReXGlue requires Clang 18 or newer (found ${CMAKE_CXX_COMPILER_VERSION})")
 endif()
 
+# Enforce 64‑bit architecture (prevents many build issues)
+if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+    message(FATAL_ERROR "ReXGlue only supports 64‑bit architectures (x86_64 or ARM64)")
+endif()
+
 # Set C++23 standard
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -62,7 +67,7 @@ set(CMAKE_RELWITHDEBINFO_POSTFIX rd)
 if(NOT WIN32)
     # Use appropriate code model based on architecture
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
-        # Large code model on x86_64 for linking with very large recompiled executables .
+        # Large code model on x86_64 for linking with very large recompiled executables.
         add_compile_options(-mcmodel=large)
     else()
         # Small code model for other architectures (ARM64, etc.)
@@ -83,9 +88,15 @@ add_compile_options(
     -fno-char8_t
 )
 
-# Platform detection
+# Platform detection (for both Windows and Linux)
 if(WIN32)
-    set(REX_PLATFORM "win-amd64")
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
+        set(REX_PLATFORM "win-amd64")
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|ARM64")
+        set(REX_PLATFORM "win-arm64")
+    else()
+        message(FATAL_ERROR "Unsupported Windows architecture: ${CMAKE_SYSTEM_PROCESSOR}")
+    endif()
     add_compile_definitions(REX_PLATFORM_WINDOWS=1)
 elseif(UNIX AND NOT APPLE)
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
