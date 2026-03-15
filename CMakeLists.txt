@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 3.25)
 
 project(ReXGlue
-    VERSION 0.3.0
+    VERSION 0.4.2
     LANGUAGES C CXX
     DESCRIPTION "Xbox 360 Recompilation SDK"
 )
@@ -18,8 +18,9 @@ configure_file(
 #==========================================================
 # Build Options
 #==========================================================
-option(REXGLUE_BUILD_TESTS       "Build PPC instruction and unit tests" OFF)
+option(REXGLUE_BUILD_TESTS       "Build PPC instruction and unit tests" ON)
 option(REXGLUE_ENABLE_SANITIZERS "Enable UndefinedBehaviorSanitizer" OFF)
+option(REXGLUE_ENABLE_FIDELITYFX "Enable optional AMD FidelityFX integration (experimental)" ON)
 
 # Graphics backend selection
 # D3D12: Windows only, ON by default.
@@ -36,12 +37,29 @@ if(NOT REXGLUE_USE_D3D12 AND NOT REXGLUE_USE_VULKAN)
     message(FATAL_ERROR "At least one graphics backend must be enabled (REXGLUE_USE_D3D12 or REXGLUE_USE_VULKAN)")
 endif()
 
+if (REXGLUE_ENABLE_FIDELITYFX AND
+    NOT (REXGLUE_USE_VULKAN OR REXGLUE_USE_D3D12))
+    message(FATAL_ERROR
+        "REXGLUE_ENABLE_FIDELITYFX requires at least one graphics backend")
+endif()
+
 # Root of the SDK source tree
 set(REXGLUE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # SDK install support
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
+
+if(UNIX AND NOT APPLE)
+    # Keep installed binaries self-contained by resolving shared libs relative
+    # to the install prefix (for example, bin -> ../lib).
+    set(CMAKE_BUILD_RPATH_USE_ORIGIN ON)
+    list(APPEND CMAKE_INSTALL_RPATH
+        "$ORIGIN"
+        "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}"
+    )
+    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
+endif()
 
 # Enforce Clang18 compiler
 if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -154,10 +172,12 @@ message(STATUS "  Configurations: ${CMAKE_CONFIGURATION_TYPES}")
 message(STATUS "  Output Dir: ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 message(STATUS "  C++ Standard: C++${CMAKE_CXX_STANDARD}")
 message(STATUS "  Graphics: D3D12=${REXGLUE_USE_D3D12} Vulkan=${REXGLUE_USE_VULKAN}")
+message(STATUS "  FidelityFX: ${REXGLUE_ENABLE_FIDELITYFX}")
 message(STATUS "===========================================")
 
 # SDK install/export rules (skipped when consumed as a subdirectory)
 if(PROJECT_IS_TOP_LEVEL)
+    include(cmake/rexglue_devenv.cmake)
     include(cmake/rexglue_install.cmake)
 else()
     # When consumed via add_subdirectory(), provide the same interface as find_package().

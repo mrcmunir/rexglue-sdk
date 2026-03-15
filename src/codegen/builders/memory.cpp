@@ -9,7 +9,7 @@
  *              See LICENSE file in the project root for full license text.
  */
 
-#include "../builder_context.h"
+#include "builder_context.h"
 #include "helpers.h"
 
 namespace rex::codegen {
@@ -106,6 +106,15 @@ bool build_lhau(BuilderContext& ctx) {
   return true;
 }
 
+bool build_lhaux(BuilderContext& ctx) {
+  // Load Halfword Algebraic with Update Indexed: EA = rA + rB; rD = EXTS(MEM16(EA)); rA = EA
+  ctx.println("\t{} = {}.u32 + {}.u32;", ctx.ea(), ctx.r(ctx.insn.operands[1]),
+              ctx.r(ctx.insn.operands[2]));
+  ctx.println("\t{}.s64 = int16_t(PPC_LOAD_U16({}));", ctx.r(ctx.insn.operands[0]), ctx.ea());
+  ctx.println("\t{}.u32 = {};", ctx.r(ctx.insn.operands[1]), ctx.ea());
+  return true;
+}
+
 bool build_lhbrx(BuilderContext& ctx) {
   // Load Halfword Byte-Reverse Indexed
   ctx.print("\t{}.u64 = __builtin_bswap16({}(", ctx.r(ctx.insn.operands[0]),
@@ -122,6 +131,15 @@ bool build_lhbrx(BuilderContext& ctx) {
 
 bool build_lwa(BuilderContext& ctx) {
   emitSignExtendLoadDForm(ctx, "int32_t", "PPC_LOAD_U32");
+  return true;
+}
+
+bool build_lwaux(BuilderContext& ctx) {
+  // Load Word Algebraic with Update Indexed: EA = rA + rB; rD = EXTS(MEM32(EA)); rA = EA
+  ctx.println("\t{} = {}.u32 + {}.u32;", ctx.ea(), ctx.r(ctx.insn.operands[1]),
+              ctx.r(ctx.insn.operands[2]));
+  ctx.println("\t{}.s64 = int32_t(PPC_LOAD_U32({}));", ctx.r(ctx.insn.operands[0]), ctx.ea());
+  ctx.println("\t{}.u32 = {};", ctx.r(ctx.insn.operands[1]), ctx.ea());
   return true;
 }
 
@@ -395,10 +413,7 @@ bool build_std(BuilderContext& ctx) {
 }
 
 bool build_stdu(BuilderContext& ctx) {
-  ctx.println("\t{} = {} + {}.u32;", ctx.ea(), static_cast<int32_t>(ctx.insn.operands[1]),
-              ctx.r(ctx.insn.operands[2]));
-  ctx.println("\tPPC_STORE_U64({}, {}.u64);", ctx.ea(), ctx.r(ctx.insn.operands[0]));
-  ctx.println("\t{}.u32 = {};", ctx.r(ctx.insn.operands[2]), ctx.ea());
+  emitStoreWithUpdate(ctx, "PPC_STORE_U64", "u64");
   return true;
 }
 
@@ -432,6 +447,16 @@ bool build_stfdx(BuilderContext& ctx) {
   if (ctx.insn.operands[1] != 0)
     ctx.print("{}.u32 + ", ctx.r(ctx.insn.operands[1]));
   ctx.println("{}.u32, {}.u64);", ctx.r(ctx.insn.operands[2]), ctx.f(ctx.insn.operands[0]));
+  return true;
+}
+
+bool build_stfdux(BuilderContext& ctx) {
+  // Store Floating-point Double with Update Indexed: EA = rA + rB; MEM(EA) = FRS; rA = EA
+  ctx.emit_set_flush_mode(false);
+  ctx.println("\t{} = {}.u32 + {}.u32;", ctx.ea(), ctx.r(ctx.insn.operands[1]),
+              ctx.r(ctx.insn.operands[2]));
+  ctx.println("\tPPC_STORE_U64({}, {}.u64);", ctx.ea(), ctx.f(ctx.insn.operands[0]));
+  ctx.println("\t{}.u32 = {};", ctx.r(ctx.insn.operands[1]), ctx.ea());
   return true;
 }
 

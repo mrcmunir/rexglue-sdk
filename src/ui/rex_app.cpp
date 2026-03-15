@@ -12,6 +12,7 @@
 #include <rex/rex_app.h>
 
 #include <rex/cvar.h>
+#include <rex/ui/flags.h>
 #include <rex/kernel/crt/heap.h>
 #include <rex/filesystem.h>
 #include <rex/logging/sink.h>
@@ -65,7 +66,7 @@ bool ReXApp::OnInitialize() {
     game_dir = exe_dir / "assets";
   }
 
-  // User data: cvar override, or platform default
+  // User data: cvar override, or platform user directory
   std::filesystem::path user_dir;
   std::string user_data_cvar = REXCVAR_GET(user_data_root);
   if (!user_data_cvar.empty()) {
@@ -167,6 +168,9 @@ bool ReXApp::OnInitialize() {
 
   window_->AddListener(this);
   window_->AddInputListener(this, 0);
+  if (REXCVAR_GET(fullscreen)) {
+    window_->SetFullscreen(true);
+  }
   window_->Open();
 
   // Setup graphics presenter and ImGui
