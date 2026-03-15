@@ -64,7 +64,8 @@ jobs:
             libx11-xcb-dev \
             libvulkan-dev \
             libasound2-dev \
-            libpulse-dev
+            libpulse-dev \
+            libvulkan-dev \
 
       - name: Configure (CMake multi-config preset)
         run: cmake --preset linux-arm64
