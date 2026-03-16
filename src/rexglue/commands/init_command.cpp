@@ -138,6 +138,24 @@ std::string generate_cmake_presets() {
   content += "            }\n";
   content += "        },\n";
   content += "        {\n";
+  content += "            \"name\": \"windows-arm64-base\",\n";
+  content += "            \"hidden\": true,\n";
+  content += "            \"inherits\": \"windows-base\",\n";
+  content += "            \"cacheVariables\": {\n";
+  content += "                \"CMAKE_C_FLAGS\": \"-march=armv8-a\",\n";
+  content += "                \"CMAKE_CXX_FLAGS\": \"-march=armv8-a\"\n";
+  content += "            }\n";
+  content += "        },\n";
+  content += "        {\n";
+  content += "            \"name\": \"linux-arm64-base\",\n";
+  content += "            \"hidden\": true,\n";
+  content += "            \"inherits\": \"linux-base\",\n";
+  content += "            \"cacheVariables\": {\n";
+  content += "                \"CMAKE_C_FLAGS\": \"-march=armv8-a\",\n";
+  content += "                \"CMAKE_CXX_FLAGS\": \"-march=armv8-a\"\n";
+  content += "            }\n";
+  content += "        },\n";
+  content += "        {\n";
   content += "            \"name\": \"win-amd64-debug\",\n";
   content += "            \"displayName\": \"Windows AMD64 Debug\",\n";
   content += "            \"inherits\": \"windows-base\",\n";
@@ -148,6 +166,30 @@ std::string generate_cmake_presets() {
   content += "            \"displayName\": \"Windows AMD64 Release\",\n";
   content += "            \"inherits\": \"windows-base\",\n";
   content += "            \"cacheVariables\": { \"CMAKE_BUILD_TYPE\": \"Release\" }\n";
+  content += "        },\n";
+  content += "        {\n";
+  content += "            \"name\": \"win-amd64-relwithdebinfo\",\n";
+  content += "            \"displayName\": \"Windows AMD64 RelWithDebInfo\",\n";
+  content += "            \"inherits\": \"windows-base\",\n";
+  content += "            \"cacheVariables\": { \"CMAKE_BUILD_TYPE\": \"RelWithDebInfo\" }\n";
+  content += "        },\n";
+  content += "        {\n";
+  content += "            \"name\": \"win-arm64-debug\",\n";
+  content += "            \"displayName\": \"Windows ARM64 Debug\",\n";
+  content += "            \"inherits\": \"windows-arm64-base\",\n";
+  content += "            \"cacheVariables\": { \"CMAKE_BUILD_TYPE\": \"Debug\" }\n";
+  content += "        },\n";
+  content += "        {\n";
+  content += "            \"name\": \"win-arm64-release\",\n";
+  content += "            \"displayName\": \"Windows ARM64 Release\",\n";
+  content += "            \"inherits\": \"windows-arm64-base\",\n";
+  content += "            \"cacheVariables\": { \"CMAKE_BUILD_TYPE\": \"Release\" }\n";
+  content += "        },\n";
+  content += "        {\n";
+  content += "            \"name\": \"win-arm64-relwithdebinfo\",\n";
+  content += "            \"displayName\": \"Windows ARM64 RelWithDebInfo\",\n";
+  content += "            \"inherits\": \"windows-arm64-base\",\n";
+  content += "            \"cacheVariables\": { \"CMAKE_BUILD_TYPE\": \"RelWithDebInfo\" }\n";
   content += "        },\n";
   content += "        {\n";
   content += "            \"name\": \"linux-amd64-debug\",\n";
@@ -162,34 +204,43 @@ std::string generate_cmake_presets() {
   content += "            \"cacheVariables\": { \"CMAKE_BUILD_TYPE\": \"Release\" }\n";
   content += "        },\n";
   content += "        {\n";
-  content += "            \"name\": \"win-amd64-relwithdebinfo\",\n";
-  content += "            \"displayName\": \"Windows AMD64 RelWithDebInfo\",\n";
-  content += "            \"inherits\": \"windows-base\",\n";
-  content += "            \"cacheVariables\": { \"CMAKE_BUILD_TYPE\": \"RelWithDebInfo\" }\n";
-  content += "        },\n";
-  content += "        {\n";
   content += "            \"name\": \"linux-amd64-relwithdebinfo\",\n";
   content += "            \"displayName\": \"Linux AMD64 RelWithDebInfo\",\n";
   content += "            \"inherits\": \"linux-base\",\n";
   content += "            \"cacheVariables\": { \"CMAKE_BUILD_TYPE\": \"RelWithDebInfo\" }\n";
+  content += "        },\n";
+  content += "        {\n";
+  content += "            \"name\": \"linux-arm64-debug\",\n";
+  content += "            \"displayName\": \"Linux ARM64 Debug\",\n";
+  content += "            \"inherits\": \"linux-arm64-base\",\n";
+  content += "            \"cacheVariables\": { \"CMAKE_BUILD_TYPE\": \"Debug\" }\n";
+  content += "        },\n";
+  content += "        {\n";
+  content += "            \"name\": \"linux-arm64-release\",\n";
+  content += "            \"displayName\": \"Linux ARM64 Release\",\n";
+  content += "            \"inherits\": \"linux-arm64-base\",\n";
+  content += "            \"cacheVariables\": { \"CMAKE_BUILD_TYPE\": \"Release\" }\n";
+  content += "        },\n";
+  content += "        {\n";
+  content += "            \"name\": \"linux-arm64-relwithdebinfo\",\n";
+  content += "            \"displayName\": \"Linux ARM64 RelWithDebInfo\",\n";
+  content += "            \"inherits\": \"linux-arm64-base\",\n";
+  content += "            \"cacheVariables\": { \"CMAKE_BUILD_TYPE\": \"RelWithDebInfo\" }\n";
   content += "        }\n";
   content += "    ],\n";
   content += "    \"buildPresets\": [\n";
-  content +=
-      "        { \"name\": \"win-amd64-debug\", \"configurePreset\": \"win-amd64-debug\" },\n";
-  content +=
-      "        { \"name\": \"win-amd64-release\", \"configurePreset\": \"win-amd64-release\" },\n";
-  content +=
-      "        { \"name\": \"win-amd64-relwithdebinfo\", \"configurePreset\": "
-      "\"win-amd64-relwithdebinfo\" },\n";
-  content +=
-      "        { \"name\": \"linux-amd64-debug\", \"configurePreset\": \"linux-amd64-debug\" },\n";
-  content +=
-      "        { \"name\": \"linux-amd64-release\", \"configurePreset\": \"linux-amd64-release\" "
-      "},\n";
-  content +=
-      "        { \"name\": \"linux-amd64-relwithdebinfo\", \"configurePreset\": "
-      "\"linux-amd64-relwithdebinfo\" }\n";
+  content += "        { \"name\": \"win-amd64-debug\", \"configurePreset\": \"win-amd64-debug\" },\n";
+  content += "        { \"name\": \"win-amd64-release\", \"configurePreset\": \"win-amd64-release\" },\n";
+  content += "        { \"name\": \"win-amd64-relwithdebinfo\", \"configurePreset\": \"win-amd64-relwithdebinfo\" },\n";
+  content += "        { \"name\": \"win-arm64-debug\", \"configurePreset\": \"win-arm64-debug\" },\n";
+  content += "        { \"name\": \"win-arm64-release\", \"configurePreset\": \"win-arm64-release\" },\n";
+  content += "        { \"name\": \"win-arm64-relwithdebinfo\", \"configurePreset\": \"win-arm64-relwithdebinfo\" },\n";
+  content += "        { \"name\": \"linux-amd64-debug\", \"configurePreset\": \"linux-amd64-debug\" },\n";
+  content += "        { \"name\": \"linux-amd64-release\", \"configurePreset\": \"linux-amd64-release\" },\n";
+  content += "        { \"name\": \"linux-amd64-relwithdebinfo\", \"configurePreset\": \"linux-amd64-relwithdebinfo\" },\n";
+  content += "        { \"name\": \"linux-arm64-debug\", \"configurePreset\": \"linux-arm64-debug\" },\n";
+  content += "        { \"name\": \"linux-arm64-release\", \"configurePreset\": \"linux-arm64-release\" },\n";
+  content += "        { \"name\": \"linux-arm64-relwithdebinfo\", \"configurePreset\": \"linux-arm64-relwithdebinfo\" }\n";
   content += "    ]\n";
   content += "}\n";
 

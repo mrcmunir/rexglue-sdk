@@ -20,7 +20,14 @@ configure_file(
 #==========================================================
 option(REXGLUE_BUILD_TESTS       "Build PPC instruction and unit tests" OFF)
 option(REXGLUE_ENABLE_SANITIZERS "Enable UndefinedBehaviorSanitizer" OFF)
-option(REXGLUE_ENABLE_FIDELITYFX "Enable optional AMD FidelityFX integration (experimental)" ON)
+
+# FidelityFX: enabled by default only on AMD64 (x86_64)
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|ARM64)$")
+    set(REXGLUE_ENABLE_FIDELITYFX_DEFAULT OFF)
+else()
+    set(REXGLUE_ENABLE_FIDELITYFX_DEFAULT ON)
+endif()
+option(REXGLUE_ENABLE_FIDELITYFX "Enable optional AMD FidelityFX integration (experimental)" ${REXGLUE_ENABLE_FIDELITYFX_DEFAULT})
 
 # Graphics backend selection
 # D3D12: Windows only, ON by default.
@@ -37,10 +44,16 @@ if(NOT REXGLUE_USE_D3D12 AND NOT REXGLUE_USE_VULKAN)
     message(FATAL_ERROR "At least one graphics backend must be enabled (REXGLUE_USE_D3D12 or REXGLUE_USE_VULKAN)")
 endif()
 
-if (REXGLUE_ENABLE_FIDELITYFX AND
+if(REXGLUE_ENABLE_FIDELITYFX AND
     NOT (REXGLUE_USE_VULKAN OR REXGLUE_USE_D3D12))
     message(FATAL_ERROR
         "REXGLUE_ENABLE_FIDELITYFX requires at least one graphics backend")
+endif()
+
+# Force-disable FidelityFX on ARM64 (it does not work there)
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|ARM64)$" AND REXGLUE_ENABLE_FIDELITYFX)
+    message(WARNING "FidelityFX is not supported on ARM64. Disabling it.")
+    set(REXGLUE_ENABLE_FIDELITYFX OFF CACHE BOOL "Enable optional AMD FidelityFX integration (experimental)" FORCE)
 endif()
 
 # Root of the SDK source tree
@@ -61,7 +74,7 @@ if(UNIX AND NOT APPLE)
     set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
 endif()
 
-# Enforce Clang18 compiler
+# Enforce Clang 18+ compiler
 if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     message(FATAL_ERROR "ReXGlue requires Clang compiler. Please set CMAKE_CXX_COMPILER to clang++")
 endif()
@@ -70,9 +83,9 @@ if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "18.0")
     message(FATAL_ERROR "ReXGlue requires Clang 18 or newer (found ${CMAKE_CXX_COMPILER_VERSION})")
 endif()
 
-# Enforce x64 architecture
+# Enforce 64‑bit architecture (supports x86_64 and ARM64)
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-    message(FATAL_ERROR "ReXGlue only supports x64 architecture")
+    message(FATAL_ERROR "ReXGlue only supports 64‑bit architectures (x86_64 or ARM64)")
 endif()
 
 # Set C++23 standard
@@ -83,10 +96,15 @@ set(CMAKE_DEBUG_POSTFIX d)
 set(CMAKE_RELWITHDEBINFO_POSTFIX rd)
 
 if(NOT WIN32)
-    # TODO: do we actually need this?
-    # Use large code model on Linux for linking with very large recompiled executables (35MB+)
+    # Use appropriate code model based on architecture
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64")
+        # Large code model on x86_64 for linking with very large recompiled executables (35MB+)
+        add_compile_options(-mcmodel=large)
+    else()
+        # Small code model for other architectures (ARM64, etc.)
+        add_compile_options(-mcmodel=small)
+    endif()
     # Position-independent code for all targets
-    add_compile_options(-mcmodel=large)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 
@@ -101,12 +119,24 @@ add_compile_options(
     -fno-char8_t
 )
 
-# Platform detection
+# Platform detection (supports AMD64 and ARM64)
 if(WIN32)
-    set(REX_PLATFORM "win-amd64")
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64")
+        set(REX_PLATFORM "win-amd64")
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|ARM64")
+        set(REX_PLATFORM "win-arm64")
+    else()
+        message(FATAL_ERROR "Unsupported Windows architecture: ${CMAKE_SYSTEM_PROCESSOR}")
+    endif()
     add_compile_definitions(REX_PLATFORM_WINDOWS=1)
 elseif(UNIX AND NOT APPLE)
-    set(REX_PLATFORM "linux-amd64")
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64")
+        set(REX_PLATFORM "linux-amd64")
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|ARM64")
+        set(REX_PLATFORM "linux-arm64")
+    else()
+        set(REX_PLATFORM "linux-${CMAKE_SYSTEM_PROCESSOR}")
+    endif()
     add_compile_definitions(REX_PLATFORM_LINUX=1)
 else()
     message(FATAL_ERROR "Unsupported platform. ReXGlue supports Windows and Linux only.")
@@ -134,7 +164,7 @@ add_subdirectory(thirdparty)
 
 # Enable warnings after thirdparty
 add_compile_options(
-    -Wall 
+    -Wall
     -Wextra
 )
 
@@ -148,7 +178,7 @@ add_subdirectory(src/audio)
 add_subdirectory(src/graphics)
 add_subdirectory(src/system)
 add_subdirectory(src/kernel)
-add_subdirectory(src/codegen)    
+add_subdirectory(src/codegen)
 add_subdirectory(src/rexglue)
 
 # Add tests subdirectory if tests are enabled
