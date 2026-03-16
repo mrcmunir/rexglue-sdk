@@ -64,6 +64,7 @@ target_link_libraries(rexsystem
     PUBLIC
         rexcore
         rexfilesystem
+        rexkernel
         simde
     PRIVATE
         aes128
