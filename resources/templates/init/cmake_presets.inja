@@ -1,6 +1,10 @@
 {
     "version": 6,
-    "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 25,
+        "patch": 0
+    },
     "configurePresets": [
         {
             "name": "windows-base",
@@ -9,7 +13,9 @@
             "binaryDir": "${sourceDir}/out/build/${presetName}",
             "cacheVariables": {
                 "CMAKE_C_COMPILER": "clang",
-                "CMAKE_CXX_COMPILER": "clang++"
+                "CMAKE_CXX_COMPILER": "clang++",
+                "CMAKE_CXX_STANDARD": "23",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
             },
             "condition": {
                 "type": "equals",
@@ -23,8 +29,10 @@
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/out/build/${presetName}",
             "cacheVariables": {
-                "CMAKE_C_COMPILER": "clang-20",
-                "CMAKE_CXX_COMPILER": "clang++-20"
+                "CMAKE_C_COMPILER": "clang",
+                "CMAKE_CXX_COMPILER": "clang++",
+                "CMAKE_CXX_STANDARD": "23",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
             },
             "condition": {
                 "type": "equals",
@@ -32,49 +40,44 @@
                 "rhs": "Linux"
             }
         },
+        {% for os in ["windows", "linux"] %}
         {
-            "name": "win-amd64-debug",
-            "displayName": "Windows AMD64 Debug",
-            "inherits": "windows-base",
-            "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
-        },
+            "name": "{{ os }}-arm64-base",
+            "hidden": true,
+            "inherits": "{{ os }}-base",
+            "cacheVariables": {
+                "CMAKE_C_FLAGS": "-march=armv8-a",
+                "CMAKE_CXX_FLAGS": "-march=armv8-a"
+            }
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+        ,
+        {% for os in ["windows", "linux"] %}
+        {% for arch in ["amd64", "arm64"] %}
+        {% for config in ["Debug", "Release", "RelWithDebInfo"] %}
         {
-            "name": "win-amd64-release",
-            "displayName": "Windows AMD64 Release",
-            "inherits": "windows-base",
-            "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
-        },
-        {
-            "name": "linux-amd64-debug",
-            "displayName": "Linux AMD64 Debug",
-            "inherits": "linux-base",
-            "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
-        },
-        {
-            "name": "linux-amd64-release",
-            "displayName": "Linux AMD64 Release",
-            "inherits": "linux-base",
-            "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
-        },
-        {
-            "name": "win-amd64-relwithdebinfo",
-            "displayName": "Windows AMD64 RelWithDebInfo",
-            "inherits": "windows-base",
-            "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" }
-        },
-        {
-            "name": "linux-amd64-relwithdebinfo",
-            "displayName": "Linux AMD64 RelWithDebInfo",
-            "inherits": "linux-base",
-            "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" }
-        }
+            "name": "{{ os }}-{{ arch }}-{{ config|lower }}",
+            "displayName": "{{ os|capitalize }} {{ arch|upper }} {{ config }}",
+            "description": "Build for {{ os|capitalize }} {{ arch|upper }} ({{ config }}) using Clang",
+            "inherits": "{{ os }}{% if arch == 'arm64' %}-arm64-base{% else %}-base{% endif %}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "{{ config }}"
+            }
+        }{% if not (loop.parent.parent.loop.last and loop.parent.loop.last and loop.last) %},{% endif %}
+        {% endfor %}
+        {% endfor %}
+        {% endfor %}
     ],
     "buildPresets": [
-        { "name": "win-amd64-debug", "configurePreset": "win-amd64-debug" },
-        { "name": "win-amd64-release", "configurePreset": "win-amd64-release" },
-        { "name": "win-amd64-relwithdebinfo", "configurePreset": "win-amd64-relwithdebinfo" },
-        { "name": "linux-amd64-debug", "configurePreset": "linux-amd64-debug" },
-        { "name": "linux-amd64-release", "configurePreset": "linux-amd64-release" },
-        { "name": "linux-amd64-relwithdebinfo", "configurePreset": "linux-amd64-relwithdebinfo" }
+        {% for os in ["windows", "linux"] %}
+        {% for arch in ["amd64", "arm64"] %}
+        {% for config in ["Debug", "Release", "RelWithDebInfo"] %}
+        {
+            "name": "{{ os }}-{{ arch }}-{{ config|lower }}",
+            "configurePreset": "{{ os }}-{{ arch }}-{{ config|lower }}"
+        }{% if not (loop.parent.parent.loop.last and loop.parent.loop.last and loop.last) %},{% endif %}
+        {% endfor %}
+        {% endfor %}
+        {% endfor %}
     ]
 }
