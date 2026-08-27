@@ -247,6 +247,41 @@ static PageAccess PermsToPageAccess(const char perms[5]) {
 
 }  // namespace
 #endif  // REX_PLATFORM_LINUX
+// Helper function to check MAP_FIXED_NOREPLACE compatibility
+static bool HasMapFixedNoReplace() {
+#if defined(MAP_FIXED_NOREPLACE) && defined(__linux__)
+// On Linux, check kernel version at runtime or compile time
+#ifdef REX_KERNEL_VERSION
+// If REX_KERNEL_VERSION is defined, use it for checking
+#if REX_KERNEL_VERSION >= KERNEL_VERSION(4, 17, 0)
+  return true;
+#else
+  return false;
+#endif
+#else
+  // If not defined, check at runtime by attempting to use it
+  // First call will attempt MAP_FIXED_NOREPLACE
+  static bool checked = false;
+  static bool supported = false;
+  if (!checked) {
+    checked = true;
+    void* test = mmap(nullptr, getpagesize(), PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (test != MAP_FAILED) {
+      void* test2 = mmap(test, getpagesize(), PROT_NONE,
+                         MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
+      supported = (test2 != MAP_FAILED);
+      if (test2 != MAP_FAILED) {
+        munmap(test2, getpagesize());
+      }
+      munmap(test, getpagesize());
+    }
+  }
+  return supported;
+#endif
+#else
+  return false;
+#endif
+}
 
 void* AllocFixed(void* base_address, size_t length, AllocationType allocation_type,
                  PageAccess access) {
