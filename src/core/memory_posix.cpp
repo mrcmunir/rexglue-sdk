@@ -28,6 +28,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
 // Ensure 64-bit off_t on Linux for ftruncate64 support
 #ifndef _FILE_OFFSET_BITS
 #define _FILE_OFFSET_BITS 64
@@ -95,6 +96,7 @@ static std::string MakeShmName(const std::filesystem::path& path) {
 #endif
   return name;
 }
+
 #if REX_PLATFORM_ANDROID
 // May be null if no dynamically loaded functions are required.
 static void* libandroid_;
@@ -125,6 +127,7 @@ void AndroidShutdown() {
 size_t page_size() {
   return getpagesize();
 }
+
 size_t allocation_granularity() {
   return page_size();
 }
@@ -247,6 +250,7 @@ static PageAccess PermsToPageAccess(const char perms[5]) {
 
 }  // namespace
 #endif  // REX_PLATFORM_LINUX
+
 // Helper function to check MAP_FIXED_NOREPLACE compatibility
 static bool HasMapFixedNoReplace() {
 #if defined(MAP_FIXED_NOREPLACE) && defined(__linux__)
@@ -304,10 +308,10 @@ void* AllocFixed(void* base_address, size_t length, AllocationType allocation_ty
       break;
   }
 
-    // On macOS, MAP_FIXED_NOREPLACE is unavailable. kCommit on a pre-reserved
-    // range uses mprotect to avoid clobbering the existing reservation. Do not
-    // widen sub-host-page requests here - higher-level guest heaps must reconcile
-    // all guest permissions sharing a host page first.
+  // On macOS, MAP_FIXED_NOREPLACE is unavailable. kCommit on a pre-reserved
+  // range uses mprotect to avoid clobbering the existing reservation. Do not
+  // widen sub-host-page requests here - higher-level guest heaps must reconcile
+  // all guest permissions sharing a host page first.
 #if REX_PLATFORM_MAC
   if (base_address != nullptr && allocation_type == AllocationType::kCommit) {
     const size_t host_page = page_size();
@@ -349,9 +353,10 @@ void* AllocFixed(void* base_address, size_t length, AllocationType allocation_ty
       munmap(test, length);
       flags |= MAP_FIXED;
     }
-#endif
+  }
+#endif  // !REX_PLATFORM_LINUX
 
-    void* result = mmap(base_address, length, prot_initial, flags, -1, 0);
+  void* result = mmap(base_address, length, prot_initial, flags, -1, 0);
   if (result != MAP_FAILED) {
     if (base_address && result != base_address) {
       // MAP_FIXED_NOREPLACE was ignored by the kernel at runtime
@@ -388,7 +393,9 @@ bool DeallocFixed(void* base_address, size_t length, DeallocationType deallocati
         return false;
       }
 #if defined(MADV_DONTNEED)
-      (void)madvise(base_address, length, MADV_DONTNEED);
+      if (madvise(base_address, length, MADV_DONTNEED) != 0) {
+        REXSYS_WARNING("madvise MADV_DONTNEED failed: {}", strerror(errno));
+      }
 #endif
       return true;
     }
@@ -508,12 +515,14 @@ FileMappingHandle CreateFileMappingHandle(const std::filesystem::path& path, siz
   // https://chromium.googlesource.com/chromium/src/+/master/third_party/ashmem/ashmem-dev.c
   int ashmem_fd = open("/" ASHMEM_NAME_DEF, O_RDWR);
   if (ashmem_fd < 0) {
+    REXSYS_ERROR("ashmem open failed: {} ({})", strerror(errno), errno);
     return kFileMappingHandleInvalid;
   }
   char ashmem_name[ASHMEM_NAME_LEN];
   strlcpy(ashmem_name, path.c_str(), rex::countof(ashmem_name));
   if (ioctl(ashmem_fd, ASHMEM_SET_NAME, ashmem_name) < 0 ||
       ioctl(ashmem_fd, ASHMEM_SET_SIZE, length) < 0) {
+    REXSYS_ERROR("ashmem ioctl failed: {} ({})", strerror(errno), errno);
     close(ashmem_fd);
     return kFileMappingHandleInvalid;
   }
@@ -540,9 +549,11 @@ FileMappingHandle CreateFileMappingHandle(const std::filesystem::path& path, siz
   auto full_path = MakeShmName(path);
   int ret = shm_open(full_path.c_str(), oflag, 0777);
   if (ret < 0) {
+    REXSYS_ERROR("shm_open failed: {} ({})", strerror(errno), errno);
     return kFileMappingHandleInvalid;
   }
   if (rex_ftruncate64(ret, static_cast<off_t>(length)) != 0) {
+    REXSYS_ERROR("ftruncate64 failed: {} ({})", strerror(errno), errno);
     close(ret);
     shm_unlink(full_path.c_str());
     return kFileMappingHandleInvalid;
@@ -552,10 +563,19 @@ FileMappingHandle CreateFileMappingHandle(const std::filesystem::path& path, siz
 }
 
 void CloseFileMappingHandle(FileMappingHandle handle, const std::filesystem::path& path) {
-  close(static_cast<int>(handle));
+  if (handle == kFileMappingHandleInvalid) {
+    return;
+  }
+
+  if (close(static_cast<int>(handle)) != 0) {
+    REXSYS_WARNING("close file mapping handle failed: {} ({})", strerror(errno), errno);
+  }
+
 #if !REX_PLATFORM_ANDROID
   auto full_path = MakeShmName(path);
-  shm_unlink(full_path.c_str());
+  if (shm_unlink(full_path.c_str()) != 0) {
+    REXSYS_WARNING("shm_unlink failed for {}: {} ({})", full_path, strerror(errno), errno);
+  }
 #endif
 }
 
@@ -564,6 +584,7 @@ void* MapFileView(FileMappingHandle handle, void* base_address, size_t length, P
   // file_offset must be page-aligned
   const size_t page = page_size();
   if (file_offset % page != 0) {
+    REXSYS_ERROR("MapFileView: file_offset {} not page-aligned", file_offset);
     return nullptr;
   }
 
@@ -580,11 +601,13 @@ void* MapFileView(FileMappingHandle handle, void* base_address, size_t length, P
   void* result = rex_mmap64(base_address, length, prot, flags, static_cast<int>(handle),
                             static_cast<off_t>(file_offset));
   if (result == MAP_FAILED) {
+    REXSYS_ERROR("MapFileView: mmap64 failed: {} ({})", strerror(errno), errno);
     return nullptr;
   }
 
   // Verify we got the address we asked for
   if (base_address && result != base_address) {
+    REXSYS_ERROR("MapFileView: mmap returned {} but requested {}", result, base_address);
     munmap(result, length);
     return nullptr;
   }
@@ -593,7 +616,11 @@ void* MapFileView(FileMappingHandle handle, void* base_address, size_t length, P
 }
 
 bool UnmapFileView(FileMappingHandle handle, void* base_address, size_t length) {
-  return munmap(base_address, length) == 0;
+  if (munmap(base_address, length) != 0) {
+    REXSYS_ERROR("UnmapFileView: munmap failed: {} ({})", strerror(errno), errno);
+    return false;
+  }
+  return true;
 }
 
 }  // namespace memory
