@@ -29,11 +29,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-// Ensure 64-bit off_t on Linux for ftruncate64 support
-#ifndef _FILE_OFFSET_BITS
-#define _FILE_OFFSET_BITS 64
-#endif
-
 #include <rex/logging.h>
 #include <rex/math.h>
 #include <rex/memory/utils.h>
@@ -65,10 +60,9 @@
 namespace rex {
 namespace memory {
 
-// Convert a filesystem path to a valid shm_open name (must start with /, no
-// other slashes). macOS enforces a 31-character total limit, so long names are
-// folded from the full path rather than only the filename. This keeps equal
-// filenames in different directories distinct.
+// Convert a filesystem path to a valid shm_open name (must start with /, no other slashes).
+// macOS enforces a 31-character total limit, so long names are folded from the full path rather
+// than only the filename. This keeps equal filenames in different directories distinct.
 static std::string MakeShmName(const std::filesystem::path& path) {
   std::string name = path.string();
   for (char& c : name) {
@@ -81,14 +75,6 @@ static std::string MakeShmName(const std::filesystem::path& path) {
   }
 #if REX_PLATFORM_MAC
   if (name.size() > 30) {
-    const std::size_t h = std::hash<std::string>{}(name);
-    char hash_buf[24];
-    std::snprintf(hash_buf, sizeof(hash_buf), "/%016zx", h);
-    name = hash_buf;
-  }
-#elif REX_PLATFORM_LINUX
-  // Linux also has limits on some embedded systems
-  if (name.size() > 255) {
     const std::size_t h = std::hash<std::string>{}(name);
     char hash_buf[24];
     std::snprintf(hash_buf, sizeof(hash_buf), "/%016zx", h);
@@ -109,9 +95,8 @@ void AndroidInitialize() {
     libandroid_ = dlopen("libandroid.so", RTLD_NOW);
     assert_not_null(libandroid_);
     if (libandroid_) {
-      android_ASharedMemory_create_ =
-          reinterpret_cast<decltype(android_ASharedMemory_create_)>(
-              dlsym(libandroid_, "ASharedMemory_create"));
+      android_ASharedMemory_create_ = reinterpret_cast<decltype(android_ASharedMemory_create_)>(
+          dlsym(libandroid_, "ASharedMemory_create"));
       assert_not_null(android_ASharedMemory_create_);
     }
   }
@@ -126,9 +111,12 @@ void AndroidShutdown() {
 }
 #endif
 
-size_t page_size() { return getpagesize(); }
-
-size_t allocation_granularity() { return page_size(); }
+size_t page_size() {
+  return getpagesize();
+}
+size_t allocation_granularity() {
+  return page_size();
+}
 
 uint32_t ToPosixProtectFlags(PageAccess access) {
   switch (access) {
@@ -158,8 +146,7 @@ bool IsWritableExecutableMemorySupported() {
 #endif
 }
 
-// TODO(tomc): this needs to go somewhere else. we should utilize the platform
-// namespace more.
+// TODO(tomc): this needs to go somewhere else. we should utilize the platform namespace more.
 #if REX_PLATFORM_LINUX
 namespace {
 
@@ -174,8 +161,7 @@ static bool ParseProcMapsLine(const std::string& line, LinuxMapEntry& out) {
   out = LinuxMapEntry{};
   unsigned long long start = 0, end = 0;
   char perms[5] = {};
-  const int matched =
-      std::sscanf(line.c_str(), "%llx-%llx %4s", &start, &end, perms);
+  const int matched = std::sscanf(line.c_str(), "%llx-%llx %4s", &start, &end, perms);
   if (matched < 3)
     return false;
   out.start = static_cast<uintptr_t>(start);
@@ -251,44 +237,6 @@ static PageAccess PermsToPageAccess(const char perms[5]) {
 }  // namespace
 #endif  // REX_PLATFORM_LINUX
 
-// Helper function to check MAP_FIXED_NOREPLACE compatibility
-static bool HasMapFixedNoReplace() {
-#if defined(MAP_FIXED_NOREPLACE) && defined(__linux__)
-// On Linux, check kernel version at runtime or compile time
-#ifdef REX_KERNEL_VERSION
-// If REX_KERNEL_VERSION is defined, use it for checking
-#if REX_KERNEL_VERSION >= KERNEL_VERSION(4, 17, 0)
-  return true;
-#else
-  return false;
-#endif
-#else
-  // If not defined, check at runtime by attempting to use it
-  // First call will attempt MAP_FIXED_NOREPLACE
-  static bool checked = false;
-  static bool supported = false;
-  if (!checked) {
-    checked = true;
-    void* test = mmap(nullptr, getpagesize(), PROT_NONE,
-                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if (test != MAP_FAILED) {
-      void* test2 = mmap(test, getpagesize(), PROT_NONE,
-                         MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1,
-                         0);
-      supported = (test2 != MAP_FAILED);
-      if (test2 != MAP_FAILED) {
-        munmap(test2, getpagesize());
-      }
-      munmap(test, getpagesize());
-    }
-  }
-  return supported;
-#endif
-#else
-  return false;
-#endif
-}
-
 void* AllocFixed(void* base_address, size_t length, AllocationType allocation_type,
                  PageAccess access) {
   // Emulates Windows VirtualAlloc behavior:
@@ -310,10 +258,10 @@ void* AllocFixed(void* base_address, size_t length, AllocationType allocation_ty
       break;
   }
 
-  // On macOS, MAP_FIXED_NOREPLACE is unavailable. kCommit on a pre-reserved
-  // range uses mprotect to avoid clobbering the existing reservation. Do not
-  // widen sub-host-page requests here - higher-level guest heaps must reconcile
-  // all guest permissions sharing a host page first.
+    // On macOS, MAP_FIXED_NOREPLACE is unavailable. kCommit on a pre-reserved
+    // range uses mprotect to avoid clobbering the existing reservation. Do not
+    // widen sub-host-page requests here - higher-level guest heaps must reconcile
+    // all guest permissions sharing a host page first.
 #if REX_PLATFORM_MAC
   if (base_address != nullptr && allocation_type == AllocationType::kCommit) {
     const size_t host_page = page_size();
@@ -328,69 +276,70 @@ void* AllocFixed(void* base_address, size_t length, AllocationType allocation_ty
   }
 #endif
 
+#if REX_PLATFORM_LINUX && !defined(MAP_FIXED_NOREPLACE)
+  // Linux kernels before 4.17 do not provide MAP_FIXED_NOREPLACE. For a
+  // commit into an existing reservation, mprotect the reservation directly.
+  if (base_address &&
+      (allocation_type == AllocationType::kCommit ||
+       allocation_type == AllocationType::kReserveCommit) &&
+      IsRangeFullyMapped(base_address, length)) {
+    if (mprotect(base_address, length, static_cast<int>(prot_requested)) == 0) {
+      return base_address;
+    }
+    return nullptr;
+  }
+#endif
+
   int flags = MAP_PRIVATE | MAP_ANONYMOUS;
+
 #if REX_PLATFORM_MAC
-  if (access == PageAccess::kExecuteReadWrite ||
-      access == PageAccess::kExecuteReadOnly) {
+  if (access == PageAccess::kExecuteReadWrite || access == PageAccess::kExecuteReadOnly) {
     flags |= MAP_JIT;
   }
   if (base_address) {
     flags |= MAP_FIXED;
   }
-#else
-  // Linux and other POSIX systems
+#elif REX_PLATFORM_LINUX
   if (base_address) {
-    // Use MAP_FIXED_NOREPLACE if available and kernel supports it
-    const bool use_fixed_noreplace = HasMapFixedNoReplace();
-
-    if (use_fixed_noreplace) {
-      flags |= MAP_FIXED_NOREPLACE;
-    } else {
-      // Fallback for older kernels: manual check
-      void* test = mmap(base_address, length, PROT_NONE,
-                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
-      if (test == MAP_FAILED) {
-        errno = EEXIST;
-        return nullptr;
-      }
-      munmap(test, length);
-      flags |= MAP_FIXED;
-    }
+#if defined(MAP_FIXED_NOREPLACE)
+    flags |= MAP_FIXED_NOREPLACE;
+#endif
   }
-#endif  // !REX_PLATFORM_LINUX
+#endif
 
   void* result = mmap(base_address, length, prot_initial, flags, -1, 0);
   if (result != MAP_FAILED) {
+#if REX_PLATFORM_LINUX && !defined(MAP_FIXED_NOREPLACE)
+    // Linux kernels before 4.17 do not provide MAP_FIXED_NOREPLACE.
+    // Without MAP_FIXED, mmap may choose another address, so reject that
+    // result instead of silently replacing an existing mapping.
     if (base_address && result != base_address) {
-      // MAP_FIXED_NOREPLACE was ignored by the kernel at runtime
-      // (old kernel). Release the erroneous mapping and treat it
-      // as a real failure to fall to the EEXIST/mprotect path.
       munmap(result, length);
-      errno = EEXIST;
-    } else {
-      return result;
+      return nullptr;
     }
+#endif
+    return result;
   }
 
-  // Handle EEXIST: address already has a mapping (e.g., from prior Reserve)
-  // This is the "commit on existing reservation" path
+#if REX_PLATFORM_LINUX && defined(MAP_FIXED_NOREPLACE)
+  // Handle EEXIST: address already has a mapping (e.g., from prior Reserve).
+  // This is the "commit on existing reservation" path.
   if (errno == EEXIST && base_address &&
       (allocation_type == AllocationType::kCommit ||
        allocation_type == AllocationType::kReserveCommit)) {
-    // Verify the entire range is mapped before using mprotect
+    // Verify the entire range is mapped before using mprotect.
     if (IsRangeFullyMapped(base_address, length)) {
-      if (mprotect(base_address, length, static_cast<int>(prot_requested)) ==
-          0) {
+      if (mprotect(base_address, length, static_cast<int>(prot_requested)) == 0) {
         return base_address;
       }
     }
   }
+#endif
 
   return nullptr;
 }
 
-bool DeallocFixed(void* base_address, size_t length,
-                  DeallocationType deallocation_type) {
+bool DeallocFixed(void* base_address, size_t length, DeallocationType deallocation_type) {
   switch (deallocation_type) {
     case DeallocationType::kDecommit: {
       // Decommit: remove access first, then release physical pages
@@ -398,9 +347,7 @@ bool DeallocFixed(void* base_address, size_t length,
         return false;
       }
 #if defined(MADV_DONTNEED)
-      if (madvise(base_address, length, MADV_DONTNEED) != 0) {
-        REXSYS_WARNING("madvise MADV_DONTNEED failed: {}", strerror(errno));
-      }
+      (void)madvise(base_address, length, MADV_DONTNEED);
 #endif
       return true;
     }
@@ -414,8 +361,7 @@ bool DeallocFixed(void* base_address, size_t length,
   }
 }
 
-bool Protect(void* base_address, size_t length, PageAccess access,
-             PageAccess* out_old_access) {
+bool Protect(void* base_address, size_t length, PageAccess access, PageAccess* out_old_access) {
   if (out_old_access) {
     *out_old_access = PageAccess::kNoAccess;
   }
@@ -428,11 +374,11 @@ bool Protect(void* base_address, size_t length, PageAccess access,
     QueryProtect(base_address, old_region_length, *out_old_access);
   }
 #elif REX_PLATFORM_LINUX
-  // NOTE(tomc): we may want to look at doing this differently. it should work
-  // for now but there is a TOCTOU window between reading and changing.
-  // This really shouldn't be an issue since VirtualProtect on Windows isn't
-  // truly atomic in a mutli-threaded process either, but it's something to be
-  // aware of. Query old access before changing, if the caller needs it
+  // NOTE(tomc): we may want to look at doing this differently. it should work for now
+  //             but there is a TOCTOU window between reading and changing.
+  //             This really shouldn't be an issue since VirtualProtect on Windows isn't truly
+  //             atomic in a mutli-threaded process either, but it's something to be aware of.
+  // Query old access before changing, if the caller needs it
   if (out_old_access) {
     LinuxMapEntry e;
     if (FindEntryForAddress(base_address, e)) {
@@ -444,8 +390,8 @@ bool Protect(void* base_address, size_t length, PageAccess access,
   uint32_t prot = ToPosixProtectFlags(access);
   int ret = mprotect(base_address, length, prot);
   if (ret != 0) {
-    REXSYS_ERROR("mprotect({}, 0x{:X}, {}) failed: {} ({})", base_address,
-                 length, prot, strerror(errno), errno);
+    REXSYS_ERROR("mprotect({}, 0x{:X}, {}) failed: {} ({})", base_address, length, prot,
+                 strerror(errno), errno);
   }
   return ret == 0;
 }
@@ -459,10 +405,8 @@ bool QueryProtect(void* base_address, size_t& length, PageAccess& access_out) {
   mach_port_t object_name;
 
   kern_return_t kr =
-      mach_vm_region(mach_task_self(), &address, &region_size,
-                     VM_REGION_BASIC_INFO_64,
-                     reinterpret_cast<vm_region_info_t>(&info), &info_count,
-                     &object_name);
+      mach_vm_region(mach_task_self(), &address, &region_size, VM_REGION_BASIC_INFO_64,
+                     reinterpret_cast<vm_region_info_t>(&info), &info_count, &object_name);
   if (kr != KERN_SUCCESS) {
     return false;
   }
@@ -470,9 +414,8 @@ bool QueryProtect(void* base_address, size_t& length, PageAccess& access_out) {
     return false;
   }
 
-  length = static_cast<size_t>(
-      (address + region_size) -
-      reinterpret_cast<mach_vm_address_t>(base_address));
+  length = static_cast<size_t>((address + region_size) -
+                               reinterpret_cast<mach_vm_address_t>(base_address));
 
   if ((info.protection & (VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE)) ==
       (VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE)) {
@@ -480,8 +423,7 @@ bool QueryProtect(void* base_address, size_t& length, PageAccess& access_out) {
   } else if ((info.protection & (VM_PROT_READ | VM_PROT_EXECUTE)) ==
              (VM_PROT_READ | VM_PROT_EXECUTE)) {
     access_out = PageAccess::kExecuteReadOnly;
-  } else if ((info.protection & (VM_PROT_READ | VM_PROT_WRITE)) ==
-             (VM_PROT_READ | VM_PROT_WRITE)) {
+  } else if ((info.protection & (VM_PROT_READ | VM_PROT_WRITE)) == (VM_PROT_READ | VM_PROT_WRITE)) {
     access_out = PageAccess::kReadWrite;
   } else if (info.protection & VM_PROT_READ) {
     access_out = PageAccess::kReadOnly;
@@ -510,16 +452,14 @@ bool QueryProtect(void* base_address, size_t& length, PageAccess& access_out) {
 #endif
 }
 
-FileMappingHandle CreateFileMappingHandle(const std::filesystem::path& path,
-                                          size_t length, PageAccess access,
-                                          bool commit) {
+FileMappingHandle CreateFileMappingHandle(const std::filesystem::path& path, size_t length,
+                                          PageAccess access, bool commit) {
 #if REX_PLATFORM_ANDROID
   // TODO(Triang3l): Check if memfd can be used instead on API 30+.
   if (android_ASharedMemory_create_) {
     int sharedmem_fd = android_ASharedMemory_create_(path.c_str(), length);
-    return sharedmem_fd >= 0
-               ? static_cast<FileMappingHandle>(sharedmem_fd)
-               : kFileMappingHandleInvalid;
+    return sharedmem_fd >= 0 ? static_cast<FileMappingHandle>(sharedmem_fd)
+                             : kFileMappingHandleInvalid;
   }
 
   // Use /dev/ashmem on API versions below 26, which added ASharedMemory.
@@ -527,14 +467,12 @@ FileMappingHandle CreateFileMappingHandle(const std::filesystem::path& path,
   // https://chromium.googlesource.com/chromium/src/+/master/third_party/ashmem/ashmem-dev.c
   int ashmem_fd = open("/" ASHMEM_NAME_DEF, O_RDWR);
   if (ashmem_fd < 0) {
-    REXSYS_ERROR("ashmem open failed: {} ({})", strerror(errno), errno);
     return kFileMappingHandleInvalid;
   }
   char ashmem_name[ASHMEM_NAME_LEN];
   strlcpy(ashmem_name, path.c_str(), rex::countof(ashmem_name));
   if (ioctl(ashmem_fd, ASHMEM_SET_NAME, ashmem_name) < 0 ||
       ioctl(ashmem_fd, ASHMEM_SET_SIZE, length) < 0) {
-    REXSYS_ERROR("ashmem ioctl failed: {} ({})", strerror(errno), errno);
     close(ashmem_fd);
     return kFileMappingHandleInvalid;
   }
@@ -561,11 +499,9 @@ FileMappingHandle CreateFileMappingHandle(const std::filesystem::path& path,
   auto full_path = MakeShmName(path);
   int ret = shm_open(full_path.c_str(), oflag, 0777);
   if (ret < 0) {
-    REXSYS_ERROR("shm_open failed: {} ({})", strerror(errno), errno);
     return kFileMappingHandleInvalid;
   }
   if (rex_ftruncate64(ret, static_cast<off_t>(length)) != 0) {
-    REXSYS_ERROR("ftruncate64 failed: {} ({})", strerror(errno), errno);
     close(ret);
     shm_unlink(full_path.c_str());
     return kFileMappingHandleInvalid;
@@ -574,32 +510,19 @@ FileMappingHandle CreateFileMappingHandle(const std::filesystem::path& path,
 #endif
 }
 
-void CloseFileMappingHandle(FileMappingHandle handle,
-                            const std::filesystem::path& path) {
-  if (handle == kFileMappingHandleInvalid) {
-    return;
-  }
-
-  if (close(static_cast<int>(handle)) != 0) {
-    REXSYS_WARNING("close file mapping handle failed: {} ({})", strerror(errno),
-                   errno);
-  }
-
+void CloseFileMappingHandle(FileMappingHandle handle, const std::filesystem::path& path) {
+  close(static_cast<int>(handle));
 #if !REX_PLATFORM_ANDROID
   auto full_path = MakeShmName(path);
-  if (shm_unlink(full_path.c_str()) != 0) {
-    REXSYS_WARNING("shm_unlink failed for {}: {} ({})", full_path,
-                   strerror(errno), errno);
-  }
+  shm_unlink(full_path.c_str());
 #endif
 }
 
-void* MapFileView(FileMappingHandle handle, void* base_address, size_t length,
-                  PageAccess access, size_t file_offset) {
+void* MapFileView(FileMappingHandle handle, void* base_address, size_t length, PageAccess access,
+                  size_t file_offset) {
   // file_offset must be page-aligned
   const size_t page = page_size();
   if (file_offset % page != 0) {
-    REXSYS_ERROR("MapFileView: file_offset {} not page-aligned", file_offset);
     return nullptr;
   }
 
@@ -613,18 +536,14 @@ void* MapFileView(FileMappingHandle handle, void* base_address, size_t length,
   }
 
   uint32_t prot = ToPosixProtectFlags(access);
-  void* result =
-      rex_mmap64(base_address, length, prot, flags, static_cast<int>(handle),
-                 static_cast<off_t>(file_offset));
+  void* result = rex_mmap64(base_address, length, prot, flags, static_cast<int>(handle),
+                            static_cast<off_t>(file_offset));
   if (result == MAP_FAILED) {
-    REXSYS_ERROR("MapFileView: mmap64 failed: {} ({})", strerror(errno), errno);
     return nullptr;
   }
 
   // Verify we got the address we asked for
   if (base_address && result != base_address) {
-    REXSYS_ERROR("MapFileView: mmap returned {} but requested {}", result,
-                 base_address);
     munmap(result, length);
     return nullptr;
   }
@@ -632,14 +551,8 @@ void* MapFileView(FileMappingHandle handle, void* base_address, size_t length,
   return result;
 }
 
-bool UnmapFileView(FileMappingHandle handle, void* base_address,
-                   size_t length) {
-  if (munmap(base_address, length) != 0) {
-    REXSYS_ERROR("UnmapFileView: munmap failed: {} ({})", strerror(errno),
-                 errno);
-    return false;
-  }
-  return true;
+bool UnmapFileView(FileMappingHandle handle, void* base_address, size_t length) {
+  return munmap(base_address, length) == 0;
 }
 
 }  // namespace memory
