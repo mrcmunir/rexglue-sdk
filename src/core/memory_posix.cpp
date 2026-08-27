@@ -132,9 +132,13 @@ void AndroidShutdown() {
 }
 #endif
 
-size_t page_size() { return getpagesize(); }
+size_t page_size() {
+  return getpagesize();
+}
 
-size_t allocation_granularity() { return page_size(); }
+size_t allocation_granularity() {
+  return page_size();
+}
 
 uint32_t ToPosixProtectFlags(PageAccess access) {
   switch (access) {
@@ -273,7 +277,8 @@ static bool HasMapFixedNoReplace() {
   static bool supported = false;
   if (!checked) {
     checked = true;
-    void* test = mmap(nullptr, getpagesize(), PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    void* test =
+        mmap(nullptr, getpagesize(), PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (test != MAP_FAILED) {
       void* test2 = mmap(test, getpagesize(), PROT_NONE,
                          MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
@@ -349,8 +354,8 @@ void* AllocFixed(void* base_address, size_t length, AllocationType allocation_ty
       flags |= MAP_FIXED_NOREPLACE;
     } else {
       // Fallback for older kernels: manual check
-      void* test = mmap(base_address, length, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1,
-                        0);
+      void* test = mmap(base_address, length, PROT_NONE,
+                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
       if (test == MAP_FAILED) {
         errno = EEXIST;
         return nullptr;
@@ -457,9 +462,9 @@ bool QueryProtect(void* base_address, size_t& length, PageAccess& access_out) {
   mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;
   mach_port_t object_name;
 
-  kern_return_t kr = mach_vm_region(mach_task_self(), &address, &region_size, VM_REGION_BASIC_INFO_64,
-                                    reinterpret_cast<vm_region_info_t>(&info), &info_count,
-                                    &object_name);
+  kern_return_t kr =
+      mach_vm_region(mach_task_self(), &address, &region_size, VM_REGION_BASIC_INFO_64,
+                     reinterpret_cast<vm_region_info_t>(&info), &info_count, &object_name);
   if (kr != KERN_SUCCESS) {
     return false;
   }
