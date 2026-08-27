@@ -330,14 +330,6 @@ void* AllocFixed(void* base_address, size_t length, AllocationType allocation_ty
   if (base_address) {
     flags |= MAP_FIXED;
   }
-#elif defined(MAP_FIXED_NOREPLACE)
-  if (base_address) {
-    flags |= MAP_FIXED_NOREPLACE;
-  }
-#else
-  if (base_address) {
-    flags |= MAP_FIXED;
-  }
 #else
   // Linux and other POSIX systems
   if (base_address) {
@@ -358,7 +350,7 @@ void* AllocFixed(void* base_address, size_t length, AllocationType allocation_ty
       flags |= MAP_FIXED;
     }
   }
-#endif
+#endif  // !REX_PLATFORM_LINUX
 
     void* result = mmap(base_address, length, prot_initial, flags, -1, 0);
   if (result != MAP_FAILED) {
