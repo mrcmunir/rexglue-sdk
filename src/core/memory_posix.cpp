@@ -28,6 +28,10 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+// Ensure 64-bit off_t on Linux for ftruncate64 support
+#ifndef _FILE_OFFSET_BITS
+#define _FILE_OFFSET_BITS 64
+#endif
 
 #include <rex/logging.h>
 #include <rex/math.h>
@@ -80,10 +84,17 @@ static std::string MakeShmName(const std::filesystem::path& path) {
     std::snprintf(hash_buf, sizeof(hash_buf), "/%016zx", h);
     name = hash_buf;
   }
+#elif REX_PLATFORM_LINUX
+  // Linux also has limits on some embedded systems
+  if (name.size() > 255) {
+    const std::size_t h = std::hash<std::string>{}(name);
+    char hash_buf[24];
+    std::snprintf(hash_buf, sizeof(hash_buf), "/%016zx", h);
+    name = hash_buf;
+  }
 #endif
   return name;
 }
-
 #if REX_PLATFORM_ANDROID
 // May be null if no dynamically loaded functions are required.
 static void* libandroid_;
