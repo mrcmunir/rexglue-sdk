@@ -340,8 +340,8 @@ void* AllocFixed(void* base_address, size_t length, AllocationType allocation_ty
       flags |= MAP_FIXED_NOREPLACE;
     } else {
       // Fallback for older kernels: manual check
-          void* test = mmap(base_address, length, PROT_NONE,
-                      MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+      void* test = mmap(base_address, length, PROT_NONE,
+                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
       if (test == MAP_FAILED) {
         errno = EEXIST;
         return nullptr;
@@ -349,7 +349,6 @@ void* AllocFixed(void* base_address, size_t length, AllocationType allocation_ty
       munmap(test, length);
       flags |= MAP_FIXED;
     }
-  }
 #endif
 
     void* result = mmap(base_address, length, prot_initial, flags, -1, 0);
