@@ -338,13 +338,41 @@ void* AllocFixed(void* base_address, size_t length, AllocationType allocation_ty
   if (base_address) {
     flags |= MAP_FIXED;
   }
+#else
+  // Linux and other POSIX systems
+  if (base_address) {
+    // Use MAP_FIXED_NOREPLACE if available and kernel supports it
+    const bool use_fixed_noreplace = HasMapFixedNoReplace();
+
+    if (use_fixed_noreplace) {
+      flags |= MAP_FIXED_NOREPLACE;
+    } else {
+      // Fallback for older kernels: manual check
+      void* test = mmap(base_address, length, PROT_NONE,
+                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+      if (test == MAP_FAILED) {
+        errno = EEXIST;
+        return nullptr;
+      }
+      munmap(test, length);
+      flags |= MAP_FIXED;
+    }
+  }
 #endif
 
-  void* result = mmap(base_address, length, prot_initial, flags, -1, 0);
+    void* result = mmap(base_address, length, prot_initial, flags, -1, 0);
   if (result != MAP_FAILED) {
-    return result;
+    if (base_address && result != base_address) {
+      // MAP_FIXED_NOREPLACE was ignored by the kernel at runtime
+      // (old kernel). Release the erroneous mapping and treat it
+      // as a real failure to fall to the EEXIST/mprotect path.
+      munmap(result, length);
+      errno = EEXIST;
+    } else {
+      return result;
+    }
   }
-#if defined(MAP_FIXED_NOREPLACE) && REX_PLATFORM_LINUX
+
   // Handle EEXIST: address already has a mapping (e.g., from prior Reserve)
   // This is the "commit on existing reservation" path
   if (errno == EEXIST && base_address &&
@@ -357,7 +385,6 @@ void* AllocFixed(void* base_address, size_t length, AllocationType allocation_ty
       }
     }
   }
-#endif
 
   return nullptr;
 }
