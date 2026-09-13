@@ -13,6 +13,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <string>
@@ -87,7 +88,7 @@ static std::string MakeShmName(const std::filesystem::path& path) {
 #if REX_PLATFORM_ANDROID
 // May be null if no dynamically loaded functions are required.
 static void* libandroid_;
-// API 26+.
+ // API 26+.
 static int (*android_ASharedMemory_create_)(const char* name, size_t size);
 
 void AndroidInitialize() {
@@ -114,6 +115,7 @@ void AndroidShutdown() {
 size_t page_size() {
   return getpagesize();
 }
+
 size_t allocation_granularity() {
   return page_size();
 }
@@ -162,8 +164,9 @@ static bool ParseProcMapsLine(const std::string& line, LinuxMapEntry& out) {
   unsigned long long start = 0, end = 0;
   char perms[5] = {};
   const int matched = std::sscanf(line.c_str(), "%llx-%llx %4s", &start, &end, perms);
-  if (matched < 3)
+  if (matched < 3) {
     return false;
+  }
   out.start = static_cast<uintptr_t>(start);
   out.end = static_cast<uintptr_t>(end);
   std::memcpy(out.perms, perms, sizeof(out.perms));
@@ -174,13 +177,16 @@ static bool ParseProcMapsLine(const std::string& line, LinuxMapEntry& out) {
 static bool FindEntryForAddress(void* address, LinuxMapEntry& out_entry) {
   const uintptr_t addr = reinterpret_cast<uintptr_t>(address);
   std::ifstream maps("/proc/self/maps");
-  if (!maps.is_open())
+  if (!maps.is_open()) {
     return false;
+  }
+
   std::string line;
   while (std::getline(maps, line)) {
     LinuxMapEntry e;
-    if (!ParseProcMapsLine(line, e))
+    if (!ParseProcMapsLine(line, e)) {
       continue;
+    }
     if (addr >= e.start && addr < e.end) {
       out_entry = e;
       return true;
@@ -191,8 +197,9 @@ static bool FindEntryForAddress(void* address, LinuxMapEntry& out_entry) {
 
 // Check if [base, base+length) is fully covered by existing mappings (no gaps)
 static bool IsRangeFullyMapped(void* base_address, size_t length) {
-  if (!base_address || length == 0)
+  if (!base_address || length == 0) {
     return false;
+  }
 
   const uintptr_t begin = reinterpret_cast<uintptr_t>(base_address);
   const uintptr_t end = begin + length;
@@ -201,23 +208,29 @@ static bool IsRangeFullyMapped(void* base_address, size_t length) {
   }
 
   std::ifstream maps("/proc/self/maps");
-  if (!maps.is_open())
+  if (!maps.is_open()) {
     return false;
+  }
 
   uintptr_t cursor = begin;
   std::string line;
   while (std::getline(maps, line)) {
     LinuxMapEntry e;
-    if (!ParseProcMapsLine(line, e))
+    if (!ParseProcMapsLine(line, e)) {
       continue;
-    if (e.end <= cursor)
+    }
+    if (e.end <= cursor) {
       continue;
-    if (e.start > cursor)
+    }
+    if (e.start > cursor) {
       return false;  // gap found
+    }
     cursor = e.end;
-    if (cursor >= end)
+    if (cursor >= end) {
       return true;
+    }
   }
+
   return cursor >= end;
 }
 
@@ -227,12 +240,60 @@ static PageAccess PermsToPageAccess(const char perms[5]) {
   const bool w = perms[1] == 'w';
   const bool x = perms[2] == 'x';
 
-  if (!r && !w && !x)
+  if (!r && !w && !x) {
     return PageAccess::kNoAccess;
-  if (x)
+  }
+  if (x) {
     return w ? PageAccess::kExecuteReadWrite : PageAccess::kExecuteReadOnly;
+  }
   return w ? PageAccess::kReadWrite : PageAccess::kReadOnly;
 }
+
+#if defined(MAP_FIXED_NOREPLACE)
+// Detect MAP_FIXED_NOREPLACE support from the running kernel rather than
+// relying only on the build-time headers.
+//
+// MAP_FIXED_NOREPLACE was introduced in Linux 4.17. A newer userspace
+// header can nevertheless be used with an older kernel, in which case the
+// kernel may ignore the unknown flag and treat the address as a hint.
+//
+// We test the actual running kernel by first creating a mapping and then
+// attempting MAP_FIXED_NOREPLACE over the same range. A kernel supporting
+// the flag must return EEXIST. An older kernel may return another address,
+// which is rejected and unmapped below.
+static bool IsMapFixedNoReplaceSupported() {
+  static const bool supported = [] {
+    const size_t page = page_size();
+
+    void* reservation =
+        mmap(nullptr, page, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+    if (reservation == MAP_FAILED) {
+      return false;
+    }
+
+    void* result =
+        mmap(reservation, page, PROT_NONE,
+             MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
+
+    const bool supported = result == MAP_FAILED && errno == EEXIST;
+
+    if (result != MAP_FAILED) {
+      munmap(result, page);
+    }
+
+    munmap(reservation, page);
+
+    return supported;
+  }();
+
+  return supported;
+}
+#else
+static bool IsMapFixedNoReplaceSupported() {
+  return false;
+}
+#endif
 
 }  // namespace
 #endif  // REX_PLATFORM_LINUX
@@ -241,7 +302,7 @@ void* AllocFixed(void* base_address, size_t length, AllocationType allocation_ty
                  PageAccess access) {
   // Emulates Windows VirtualAlloc behavior:
   // - Reserve: create PROT_NONE mapping to hold address space
-  // - Commit on existing reservation: mprotect to enable access (EEXIST path)
+  // - Commit on existing reservation: mprotect to enable access
   // - New allocation: mmap with MAP_FIXED_NOREPLACE (never silently replace)
   const uint32_t prot_requested = ToPosixProtectFlags(access);
 
@@ -258,11 +319,11 @@ void* AllocFixed(void* base_address, size_t length, AllocationType allocation_ty
       break;
   }
 
-    // On macOS, MAP_FIXED_NOREPLACE is unavailable. kCommit on a pre-reserved
-    // range uses mprotect to avoid clobbering the existing reservation. Do not
-    // widen sub-host-page requests here - higher-level guest heaps must reconcile
-    // all guest permissions sharing a host page first.
 #if REX_PLATFORM_MAC
+  // On macOS, MAP_FIXED_NOREPLACE is unavailable. kCommit on a pre-reserved
+  // range uses mprotect to avoid clobbering the existing reservation. Do not
+  // widen sub-host-page requests here - higher-level guest heaps must reconcile
+  // all guest permissions sharing a host page first.
   if (base_address != nullptr && allocation_type == AllocationType::kCommit) {
     const size_t host_page = page_size();
     const uintptr_t address = reinterpret_cast<uintptr_t>(base_address);
@@ -276,67 +337,122 @@ void* AllocFixed(void* base_address, size_t length, AllocationType allocation_ty
   }
 #endif
 
-#if REX_PLATFORM_LINUX && !defined(MAP_FIXED_NOREPLACE)
-  // Linux kernels before 4.17 do not provide MAP_FIXED_NOREPLACE. For a
-  // commit into an existing reservation, mprotect the reservation directly.
-  if (base_address &&
-      (allocation_type == AllocationType::kCommit ||
-       allocation_type == AllocationType::kReserveCommit) &&
-      IsRangeFullyMapped(base_address, length)) {
-    if (mprotect(base_address, length, static_cast<int>(prot_requested)) == 0) {
-      return base_address;
-    }
-    return nullptr;
-  }
-#endif
-
   int flags = MAP_PRIVATE | MAP_ANONYMOUS;
 
 #if REX_PLATFORM_MAC
   if (access == PageAccess::kExecuteReadWrite || access == PageAccess::kExecuteReadOnly) {
     flags |= MAP_JIT;
   }
+
   if (base_address) {
     flags |= MAP_FIXED;
   }
-#elif REX_PLATFORM_LINUX
-  if (base_address) {
-#if defined(MAP_FIXED_NOREPLACE)
-    flags |= MAP_FIXED_NOREPLACE;
-#endif
-  }
-#endif
 
   void* result = mmap(base_address, length, prot_initial, flags, -1, 0);
-  if (result != MAP_FAILED) {
-#if REX_PLATFORM_LINUX && !defined(MAP_FIXED_NOREPLACE)
-    // Linux kernels before 4.17 do not provide MAP_FIXED_NOREPLACE.
-    // Without MAP_FIXED, mmap may choose another address, so reject that
-    // result instead of silently replacing an existing mapping.
-    if (base_address && result != base_address) {
-      munmap(result, length);
-      return nullptr;
-    }
-#endif
-    return result;
+  if (result == MAP_FAILED) {
+    return nullptr;
   }
 
-#if REX_PLATFORM_LINUX && defined(MAP_FIXED_NOREPLACE)
-  // Handle EEXIST: address already has a mapping (e.g., from prior Reserve).
-  // This is the "commit on existing reservation" path.
-  if (errno == EEXIST && base_address &&
-      (allocation_type == AllocationType::kCommit ||
-       allocation_type == AllocationType::kReserveCommit)) {
-    // Verify the entire range is mapped before using mprotect.
-    if (IsRangeFullyMapped(base_address, length)) {
-      if (mprotect(base_address, length, static_cast<int>(prot_requested)) == 0) {
-        return base_address;
+  if (base_address && result != base_address) {
+    munmap(result, length);
+    return nullptr;
+  }
+
+  return result;
+
+#elif REX_PLATFORM_LINUX
+  // Linux 4.17 introduced MAP_FIXED_NOREPLACE. Do not use MAP_FIXED as a
+  // fallback because MAP_FIXED may silently destroy an existing mapping.
+  //
+  // On kernels older than 4.17, mmap() without MAP_FIXED_NOREPLACE treats
+  // base_address as a hint. We therefore verify that the returned address is
+  // exactly the requested address before accepting the allocation.
+  if (base_address && IsMapFixedNoReplaceSupported()) {
+#if defined(MAP_FIXED_NOREPLACE)
+    flags |= MAP_FIXED_NOREPLACE;
+
+    void* result = mmap(base_address, length, prot_initial, flags, -1, 0);
+    if (result != MAP_FAILED) {
+      return result;
+    }
+
+    // Handle EEXIST: address already has a mapping (e.g., from prior Reserve)
+    // This is the "commit on existing reservation" path.
+    if (errno == EEXIST &&
+        (allocation_type == AllocationType::kCommit ||
+         allocation_type == AllocationType::kReserveCommit)) {
+      // Verify the entire range is mapped before using mprotect.
+      if (IsRangeFullyMapped(base_address, length)) {
+        if (mprotect(base_address, length, static_cast<int>(prot_requested)) == 0) {
+          return base_address;
+        }
       }
     }
-  }
-#endif
 
-  return nullptr;
+    return nullptr;
+#else
+    // This should be unreachable because IsMapFixedNoReplaceSupported()
+    // returns false when MAP_FIXED_NOREPLACE is unavailable in the headers.
+    return nullptr;
+#endif
+  }
+
+  // Old Linux kernels without MAP_FIXED_NOREPLACE.
+  //
+  // For kCommit, the reservation must already exist. Since there is no
+  // MAP_FIXED_NOREPLACE support, use mprotect() directly after verifying that
+  // the complete range is currently mapped.
+  if (base_address && allocation_type == AllocationType::kCommit) {
+    if (!IsRangeFullyMapped(base_address, length)) {
+      return nullptr;
+    }
+
+    if (mprotect(base_address, length, static_cast<int>(prot_requested)) == 0) {
+      return base_address;
+    }
+
+    return nullptr;
+  }
+
+  // For kReserve and kReserveCommit, use base_address only as an mmap hint.
+  // The kernel will never replace an existing mapping when MAP_FIXED is not
+  // specified. It may, however, return a different address if the requested
+  // range is unavailable.
+  //
+  // Never accept a different address for AllocFixed(), as callers require the
+  // exact requested address.
+  void* result = mmap(base_address, length, prot_initial, flags, -1, 0);
+
+  if (result == MAP_FAILED) {
+    return nullptr;
+  }
+
+  if (base_address && result != base_address) {
+    munmap(result, length);
+    return nullptr;
+  }
+
+  return result;
+
+#else
+  // Generic POSIX fallback.
+  //
+  // MAP_FIXED is intentionally not used here because silently replacing an
+  // existing mapping is unsafe for AllocFixed(). Treat base_address as a hint
+  // and require mmap() to return the exact requested address.
+  void* result = mmap(base_address, length, prot_initial, flags, -1, 0);
+
+  if (result == MAP_FAILED) {
+    return nullptr;
+  }
+
+  if (base_address && result != base_address) {
+    munmap(result, length);
+    return nullptr;
+  }
+
+  return result;
+#endif
 }
 
 bool DeallocFixed(void* base_address, size_t length, DeallocationType deallocation_type) {
@@ -375,7 +491,7 @@ bool Protect(void* base_address, size_t length, PageAccess access, PageAccess* o
   }
 #elif REX_PLATFORM_LINUX
   // NOTE(tomc): we may want to look at doing this differently. it should work for now
-  //             but there is a TOCTOU window between reading and changing.
+  //             but there's a TOCTOU window between reading and changing.
   //             This really shouldn't be an issue since VirtualProtect on Windows isn't truly
   //             atomic in a mutli-threaded process either, but it's something to be aware of.
   // Query old access before changing, if the caller needs it
@@ -423,7 +539,8 @@ bool QueryProtect(void* base_address, size_t& length, PageAccess& access_out) {
   } else if ((info.protection & (VM_PROT_READ | VM_PROT_EXECUTE)) ==
              (VM_PROT_READ | VM_PROT_EXECUTE)) {
     access_out = PageAccess::kExecuteReadOnly;
-  } else if ((info.protection & (VM_PROT_READ | VM_PROT_WRITE)) == (VM_PROT_READ | VM_PROT_WRITE)) {
+  } else if ((info.protection & (VM_PROT_READ | VM_PROT_WRITE)) ==
+             (VM_PROT_READ | VM_PROT_WRITE)) {
     access_out = PageAccess::kReadWrite;
   } else if (info.protection & VM_PROT_READ) {
     access_out = PageAccess::kReadOnly;
@@ -469,6 +586,7 @@ FileMappingHandle CreateFileMappingHandle(const std::filesystem::path& path, siz
   if (ashmem_fd < 0) {
     return kFileMappingHandleInvalid;
   }
+
   char ashmem_name[ASHMEM_NAME_LEN];
   strlcpy(ashmem_name, path.c_str(), rex::countof(ashmem_name));
   if (ioctl(ashmem_fd, ASHMEM_SET_NAME, ashmem_name) < 0 ||
@@ -495,17 +613,20 @@ FileMappingHandle CreateFileMappingHandle(const std::filesystem::path& path, siz
       assert_always();
       return kFileMappingHandleInvalid;
   }
+
   oflag |= O_CREAT;
   auto full_path = MakeShmName(path);
   int ret = shm_open(full_path.c_str(), oflag, 0777);
   if (ret < 0) {
     return kFileMappingHandleInvalid;
   }
+
   if (rex_ftruncate64(ret, static_cast<off_t>(length)) != 0) {
     close(ret);
     shm_unlink(full_path.c_str());
     return kFileMappingHandleInvalid;
   }
+
   return static_cast<FileMappingHandle>(ret);
 #endif
 }
