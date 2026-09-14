@@ -61,7 +61,6 @@
 namespace rex {
 namespace memory {
 
-
 // Convert a filesystem path to a valid shm_open name (must start with /, no other slashes).
 // macOS enforces a 31-character total limit, so long names are folded from the full path rather
 // than only the filename. This keeps equal filenames in different directories distinct.
@@ -72,11 +71,9 @@ static std::string MakeShmName(const std::filesystem::path& path) {
       c = '_';
     }
   }
-
   if (name.empty() || name[0] != '/') {
     name.insert(name.begin(), '/');
   }
-
 #if REX_PLATFORM_MAC
   if (name.size() > 30) {
     const std::size_t h = std::hash<std::string>{}(name);
@@ -85,7 +82,6 @@ static std::string MakeShmName(const std::filesystem::path& path) {
     name = hash_buf;
   }
 #endif
-
   return name;
 }
 
@@ -171,7 +167,6 @@ static bool ParseProcMapsLine(const std::string& line, LinuxMapEntry& out) {
   if (matched < 3) {
     return false;
   }
-
   out.start = static_cast<uintptr_t>(start);
   out.end = static_cast<uintptr_t>(end);
   std::memcpy(out.perms, perms, sizeof(out.perms));
@@ -192,13 +187,11 @@ static bool FindEntryForAddress(void* address, LinuxMapEntry& out_entry) {
     if (!ParseProcMapsLine(line, e)) {
       continue;
     }
-
     if (addr >= e.start && addr < e.end) {
       out_entry = e;
       return true;
     }
   }
-
   return false;
 }
 
@@ -226,15 +219,12 @@ static bool IsRangeFullyMapped(void* base_address, size_t length) {
     if (!ParseProcMapsLine(line, e)) {
       continue;
     }
-
     if (e.end <= cursor) {
       continue;
     }
-
     if (e.start > cursor) {
       return false;  // gap found
     }
-
     cursor = e.end;
     if (cursor >= end) {
       return true;
@@ -253,11 +243,9 @@ static PageAccess PermsToPageAccess(const char perms[5]) {
   if (!r && !w && !x) {
     return PageAccess::kNoAccess;
   }
-
   if (x) {
     return w ? PageAccess::kExecuteReadWrite : PageAccess::kExecuteReadOnly;
   }
-
   return w ? PageAccess::kReadWrite : PageAccess::kReadOnly;
 }
 
@@ -277,13 +265,16 @@ static bool IsMapFixedNoReplaceSupported() {
   static const bool supported = [] {
     const size_t page = page_size();
 
-    void* reservation = mmap(nullptr, page, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    void* reservation =
+        mmap(nullptr, page, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
     if (reservation == MAP_FAILED) {
       return false;
     }
 
-    void* result = mmap(reservation, page, PROT_NONE,
-                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
+    void* result =
+        mmap(reservation, page, PROT_NONE,
+             MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
 
     const bool supported = result == MAP_FAILED && errno == EEXIST;
 
@@ -339,11 +330,9 @@ void* AllocFixed(void* base_address, size_t length, AllocationType allocation_ty
     if ((address % host_page) != 0 || (length % host_page) != 0) {
       return nullptr;
     }
-
     if (mprotect(base_address, length, static_cast<int>(prot_requested)) == 0) {
       return base_address;
     }
-
     return nullptr;
   }
 #endif
@@ -389,9 +378,8 @@ void* AllocFixed(void* base_address, size_t length, AllocationType allocation_ty
 
     // Handle EEXIST: address already has a mapping (e.g., from prior Reserve)
     // This is the "commit on existing reservation" path.
-    if (errno == EEXIST &&
-        (allocation_type == AllocationType::kCommit ||
-         allocation_type == AllocationType::kReserveCommit)) {
+    if (errno == EEXIST && (allocation_type == AllocationType::kCommit ||
+                            allocation_type == AllocationType::kReserveCommit)) {
       // Verify the entire range is mapped before using mprotect.
       if (IsRangeFullyMapped(base_address, length)) {
         if (mprotect(base_address, length, static_cast<int>(prot_requested)) == 0) {
@@ -473,7 +461,6 @@ bool DeallocFixed(void* base_address, size_t length, DeallocationType deallocati
       if (mprotect(base_address, length, PROT_NONE) != 0) {
         return false;
       }
-
 #if defined(MADV_DONTNEED)
       (void)madvise(base_address, length, MADV_DONTNEED);
 #endif
@@ -538,7 +525,6 @@ bool QueryProtect(void* base_address, size_t& length, PageAccess& access_out) {
   if (kr != KERN_SUCCESS) {
     return false;
   }
-
   if (address > reinterpret_cast<mach_vm_address_t>(base_address)) {
     return false;
   }
