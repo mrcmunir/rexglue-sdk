@@ -265,16 +265,14 @@ static bool IsMapFixedNoReplaceSupported() {
   static const bool supported = [] {
     const size_t page = page_size();
 
-    void* reservation =
-        mmap(nullptr, page, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    void* reservation = mmap(nullptr, page, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
     if (reservation == MAP_FAILED) {
       return false;
     }
 
-    void* result =
-        mmap(reservation, page, PROT_NONE,
-             MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
+    void* result = mmap(reservation, page, PROT_NONE,
+                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
 
     const bool supported = result == MAP_FAILED && errno == EEXIST;
 
@@ -538,8 +536,7 @@ bool QueryProtect(void* base_address, size_t& length, PageAccess& access_out) {
   } else if ((info.protection & (VM_PROT_READ | VM_PROT_EXECUTE)) ==
              (VM_PROT_READ | VM_PROT_EXECUTE)) {
     access_out = PageAccess::kExecuteReadOnly;
-  } else if ((info.protection & (VM_PROT_READ | VM_PROT_WRITE)) ==
-             (VM_PROT_READ | VM_PROT_WRITE)) {
+  } else if ((info.protection & (VM_PROT_READ | VM_PROT_WRITE)) == (VM_PROT_READ | VM_PROT_WRITE)) {
     access_out = PageAccess::kReadWrite;
   } else if (info.protection & VM_PROT_READ) {
     access_out = PageAccess::kReadOnly;
@@ -569,7 +566,7 @@ bool QueryProtect(void* base_address, size_t& length, PageAccess& access_out) {
 }
 
 FileMappingHandle CreateFileMappingHandle(const std::filesystem::path& path, size_t length,
-                                           PageAccess access, bool commit) {
+                                          PageAccess access, bool commit) {
 #if REX_PLATFORM_ANDROID
   // TODO(Triang3l): Check if memfd can be used instead on API 30+.
   if (android_ASharedMemory_create_) {
