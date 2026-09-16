@@ -1425,14 +1425,15 @@ void* PosixCondition<Thread>::ThreadStartRoutine(void* parameter) {
     // observed the state published here while suspend_count_ was still 0 it
     // would take the "not suspended" path, return false without decrementing,
     // and the wait below would then never be satisfied.
-    if (create_suspended) {
-      thread->handle_.suspend_count_ = 1;
-    }
+   // if (create_suspended) {
+   //   thread->handle_.suspend_count_ = 1;
+   // } 
     thread->handle_.state_signal_.notify_all();
   }
 
   if (create_suspended) {
     std::unique_lock<std::mutex> lock(thread->handle_.state_mutex_);
+    thread->handle_.suspend_count_ = 1;
     thread->handle_.state_signal_.wait(lock,
                                        [thread] { return thread->handle_.suspend_count_ == 0; });
   }
