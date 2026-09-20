@@ -13,7 +13,6 @@
 
 #include <rex/ui/window_sdl.h>
 
-#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <filesystem>
@@ -43,16 +42,6 @@
 namespace rex::ui {
 
 namespace {
-
-void ResolveWindowSize(uint32_t& width, uint32_t& height) {
-  int32_t configured_width = REXCVAR_GET(window_width);
-  int32_t configured_height = REXCVAR_GET(window_height);
-  if (configured_width <= 0 || configured_height <= 0) {
-    rex::graphics::video_mode_util::ResolveConfiguredSize(configured_width, configured_height);
-  }
-  width = uint32_t(std::clamp(configured_width, 1, 8192));
-  height = uint32_t(std::clamp(configured_height, 1, 8192));
-}
 
 // SDL timer callback (runs on SDL's timer thread): defer the actual hide to
 // the UI thread. The deferred function only touches the global SDL cursor and
@@ -93,7 +82,7 @@ std::unique_ptr<Window> Window::Create(WindowedAppContext& app_context,
                                        const std::string_view title) {
   uint32_t width = 0;
   uint32_t height = 0;
-  ResolveWindowSize(width, height);
+  ResolveConfiguredLogicalSize(width, height);
   return std::make_unique<WindowSDL>(app_context, title, width, height);
 }
 
@@ -125,23 +114,7 @@ bool WindowSDL::OpenImpl() {
   sdl_window_id_ = SDL_GetWindowID(sdl_window_);
   sdl_app_context().RegisterWindow(sdl_window_id_, this);
 
-  // Center on the requested display before fullscreen so SDL resolves
-  // fullscreen against it. 1-based enumeration order; 0 = system default.
-  if (int32_t monitor_index = REXCVAR_GET(monitor); monitor_index > 0) {
-    int display_count = 0;
-    SDL_DisplayID* displays = SDL_GetDisplays(&display_count);
-    if (displays) {
-      if (monitor_index <= display_count) {
-        SDL_DisplayID display = displays[monitor_index - 1];
-        SDL_SetWindowPosition(sdl_window_, SDL_WINDOWPOS_CENTERED_DISPLAY(display),
-                              SDL_WINDOWPOS_CENTERED_DISPLAY(display));
-      } else {
-        REXLOG_WARN("monitor cvar is {} but only {} display(s) present; using default",
-                    monitor_index, display_count);
-      }
-      SDL_free(displays);
-    }
-  }
+  CenterOnConfiguredDisplay();
 
   if (IsFullscreen()) {
     ApplyFullscreenModeNow();
@@ -283,6 +256,56 @@ void WindowSDL::ApplyNewFullscreen() {
   }
   ApplyFullscreenModeNow();
   SDL_SetWindowFullscreen(sdl_window_, IsFullscreen());
+}
+
+void WindowSDL::ApplyNewMonitor() {
+  if (!sdl_window_) {
+    return;
+  }
+  const bool was_fullscreen = IsFullscreen();
+  if (was_fullscreen) {
+    SDL_SetWindowFullscreen(sdl_window_, false);
+    SDL_SyncWindow(sdl_window_);
+  }
+  CenterOnConfiguredDisplay();
+  if (was_fullscreen) {
+    ApplyFullscreenModeNow();
+    SDL_SetWindowFullscreen(sdl_window_, true);
+  }
+}
+
+void WindowSDL::ApplyNewDesiredLogicalSize() {
+  if (!sdl_window_ || (SDL_GetWindowFlags(sdl_window_) &
+                       (SDL_WINDOW_MAXIMIZED | SDL_WINDOW_FULLSCREEN | SDL_WINDOW_MINIMIZED))) {
+    return;
+  }
+#if REX_PLATFORM_MAC
+  SDL_SetWindowSize(sdl_window_, int(GetDesiredLogicalWidth()), int(GetDesiredLogicalHeight()));
+#else
+  SDL_SetWindowSize(sdl_window_, int(SizeToPhysical(GetDesiredLogicalWidth())),
+                    int(SizeToPhysical(GetDesiredLogicalHeight())));
+#endif
+}
+
+void WindowSDL::CenterOnConfiguredDisplay() {
+  const int32_t monitor_index = GetMonitor();
+  if (!sdl_window_ || monitor_index <= 0) {
+    return;
+  }
+  int display_count = 0;
+  SDL_DisplayID* displays = SDL_GetDisplays(&display_count);
+  if (!displays) {
+    return;
+  }
+  if (monitor_index <= display_count) {
+    SDL_DisplayID display = displays[monitor_index - 1];
+    SDL_SetWindowPosition(sdl_window_, SDL_WINDOWPOS_CENTERED_DISPLAY(display),
+                          SDL_WINDOWPOS_CENTERED_DISPLAY(display));
+  } else {
+    REXLOG_WARN("monitor cvar is {} but only {} display(s) present; using default", monitor_index,
+                display_count);
+  }
+  SDL_free(displays);
 }
 
 void WindowSDL::ApplyFullscreenModeNow() {
