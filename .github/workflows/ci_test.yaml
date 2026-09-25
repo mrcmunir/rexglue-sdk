@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   build-win-amd64:
-    uses: ./.github/workflows/_build-platform.yml
+    uses: ./.github/workflows/_build-platform.yaml
     with:
       platform: win-amd64
       ref: ${{ github.sha }}
@@ -20,7 +20,7 @@ jobs:
       artifact_name: ci-test-win-amd64
 
   build-linux-amd64:
-    uses: ./.github/workflows/_build-platform.yml
+    uses: ./.github/workflows/_build-platform.yaml
     with:
       platform: linux-amd64
       ref: ${{ github.sha }}
@@ -28,7 +28,7 @@ jobs:
       artifact_name: ci-test-linux-amd64
 
   build-linux-arm64:
-    uses: ./.github/workflows/_build-platform.yml
+    uses: ./.github/workflows/_build-platform.yaml
     with:
       platform: linux-arm64
       ref: ${{ github.sha }}
@@ -36,7 +36,7 @@ jobs:
       artifact_name: ci-test-linux-arm64
 
   build-mac-amd64:
-    uses: ./.github/workflows/_build-platform.yml
+    uses: ./.github/workflows/_build-platform.yaml
     with:
       platform: mac-amd64
       ref: ${{ github.sha }}
@@ -44,7 +44,7 @@ jobs:
       artifact_name: ci-test-mac-amd64
 
   build-mac-arm64:
-    uses: ./.github/workflows/_build-platform.yml
+    uses: ./.github/workflows/_build-platform.yaml
     with:
       platform: mac-arm64
       ref: ${{ github.sha }}
