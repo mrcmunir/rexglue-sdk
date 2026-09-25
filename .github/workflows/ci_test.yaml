@@ -1,0 +1,24 @@
+name: CI Test (no release)
+
+on:
+  push:
+    branches:
+      - ci_test
+  workflow_dispatch:
+
+jobs:
+  build-win-amd64:
+    uses: ./.github/workflows/build-platform.yml
+    with:
+      platform: win-amd64
+      ref: ${{ github.sha }}
+      publish_mode: artifact
+      artifact_name: ci-test-win-amd64
+
+  build-linux-amd64:
+    uses: ./.github/workflows/build-platform.yml
+    with:
+      platform: linux-amd64
+      ref: ${{ github.sha }}
+      publish_mode: artifact
+      artifact_name: ci-test-linux-amd64
