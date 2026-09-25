@@ -6,9 +6,13 @@ on:
       - ci_test
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   build-win-amd64:
-    uses: ./.github/workflows/build-platform.yml
+    uses: ./.github/workflows/_build-platform.yml
     with:
       platform: win-amd64
       ref: ${{ github.sha }}
@@ -16,9 +20,33 @@ jobs:
       artifact_name: ci-test-win-amd64
 
   build-linux-amd64:
-    uses: ./.github/workflows/build-platform.yml
+    uses: ./.github/workflows/_build-platform.yml
     with:
       platform: linux-amd64
       ref: ${{ github.sha }}
       publish_mode: artifact
       artifact_name: ci-test-linux-amd64
+
+  build-linux-arm64:
+    uses: ./.github/workflows/_build-platform.yml
+    with:
+      platform: linux-arm64
+      ref: ${{ github.sha }}
+      publish_mode: artifact
+      artifact_name: ci-test-linux-arm64
+
+  build-mac-amd64:
+    uses: ./.github/workflows/_build-platform.yml
+    with:
+      platform: mac-amd64
+      ref: ${{ github.sha }}
+      publish_mode: artifact
+      artifact_name: ci-test-mac-amd64
+
+  build-mac-arm64:
+    uses: ./.github/workflows/_build-platform.yml
+    with:
+      platform: mac-arm64
+      ref: ${{ github.sha }}
+      publish_mode: artifact
+      artifact_name: ci-test-mac-arm64
